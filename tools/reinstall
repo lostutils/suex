@@ -13,7 +13,7 @@ set buildDirectory $srcdir"/build/"$argv[1]
 set buildType (capitalize $argv[1])
 
 # remove build and binaries
-sudo rm -rf $srcdir/bin /usr/local/bin/runas $buildDirectory ;and mkdir -p $buildDirectory
+sudo rm -rf $srcdir/bin /usr/local/bin/doas $buildDirectory ;and mkdir -p $buildDirectory
 
 # recreate Makefile
 cmake -DCMAKE_BUILD_TYPE=$buildType -H$srcdir -B$buildDirectory

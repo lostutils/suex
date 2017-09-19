@@ -4,7 +4,7 @@
 #include <fstream>
 #include <ostream>
 
-#define LOG_PATH "/var/log/runas.log"
+#define LOG_PATH "/var/log/doas.log"
 
 namespace logger {
 

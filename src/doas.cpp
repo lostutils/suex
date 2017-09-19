@@ -4,7 +4,7 @@
 #include <version.h>
 #include <logger.h>
 
-int runas(const Permissions &permissions,
+int doas(const Permissions &permissions,
           const std::string &username,
           const std::string &grpname,
           char *const cmdargv[]) {
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
         // check that the running binary has the right permissions
         // i.e: suid is set and owned by root:root
-        validate_runas_binary(getpath(argv[0], true));
+        validate_binary(getpath(argv[0], true));
 
         // load the configuration from the default path
         Permissions permissions;
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
         std::string cmd = getpath(args[2], true);
         args[2] = const_cast<char *>(cmd.c_str());
 
-        return runas(permissions, user, group, &args[2]);
+        return doas(permissions, user, group, &args[2]);
 
     } catch (std::exception &e) {
         logger::error << e.what() << std::endl;

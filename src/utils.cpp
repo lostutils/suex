@@ -1,7 +1,7 @@
 #include <utils.h>
 #include <iomanip>
 
-void validate_runas_binary(const std::string &path) {
+void validate_binary(const std::string &path) {
     struct stat fstat{};
 
     if (stat(path.c_str(), &fstat) != 0) {
@@ -9,10 +9,10 @@ void validate_runas_binary(const std::string &path) {
     }
 
     if ((fstat.st_mode & S_ISUID) == 0) {
-        throw std::runtime_error("SUID is not set on runas");
+        throw std::runtime_error("SUID is not set on doas");
     }
     if (fstat.st_uid != 0 || fstat.st_gid != 0) {
-        throw std::runtime_error("runas owner should be 'root:root'");
+        throw std::runtime_error("doas owner should be 'root:root'");
     }
 }
 

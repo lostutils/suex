@@ -4,7 +4,7 @@
 #include <iostream>
 #include <regex>
 
-#define DEFAULT_CONFIG_PATH "/etc/runas.conf"
+#define DEFAULT_CONFIG_PATH "/etc/doas.conf"
 
 class ExecutablePermissions {
 public:

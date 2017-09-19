@@ -2,7 +2,7 @@
 #include <utils.h>
 
 const bool debugMode() {
-    auto env = toString(std::getenv("RUNAS_DEBUG"));
+    auto env = toString(std::getenv("DOAS_DEBUG"));
     std::transform(env.begin(), env.end(), env.begin(), ::tolower);
     return env == "true" || env == "1";
 };
@@ -42,7 +42,7 @@ std::ostream &logger::Logger::operator<<(const char *text) {
 }
 
 std::ostream &logger::Logger::operator<<(std::string &text) {
-    // don't log debug messages when the 'RUNAS_DEBUG' flag is not set.
+    // don't log debug messages when the 'DOAS_DEBUG' flag is not set.
     if (!debugMode() && _type == logger::DEBUG) {
         return _fs;
     }

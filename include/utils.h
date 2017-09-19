@@ -3,7 +3,7 @@
 #include <conf.h>
 #include <unistd.h>
 
-void validate_runas_binary(const std::string &path);
+void validate_binary(const std::string &path);
 
 bool hasperm(const Permissions &permissions, User &user, Group &grp, char *const cmdargs[]);
 
