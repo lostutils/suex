@@ -1,0 +1,4 @@
+#!/usr/bin/env fish
+chown root:root bin/runas
+chmod a+x bin/runas
+chmod u+s bin/runas

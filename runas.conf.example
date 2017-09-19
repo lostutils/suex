@@ -1,0 +1,16 @@
+# lines starting with # are comments and are not parsed
+
+# the user 'odedlaz' can execute '/usr/bin/whoami' as root
+# notice that the path is not searched in $PATH, so only full paths here.
+odedlaz -> root :: /usr/bin/whoami
+
+# every user in the group docker can execute '/bin/ls' as root
+%docker -> root :: /bin/ls
+
+
+# one can also specify command line arguments which are compiled as a ECMAScript flavored regex
+# if no args are passed, then the user can run *any* args, otherwise -> the exact regex is checked.
+
+# for instance, the following means that the user 'odedlaz'
+# can only execute [start,stop,restart,cat] on systemctl
+odedlaz -> root :: /bin/systemctl (start|stop|restart|cat) .*

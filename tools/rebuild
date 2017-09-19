@@ -1,0 +1,21 @@
+#!/usr/bin/env fish
+function capitalize
+    echo $argv | sed 's/[^ _-]*/\u&/g'
+end
+
+# set default args
+set srcdir (cd (dirname (status -f))/..; and pwd)
+set -q argv[1]; or set argv release
+
+# set build dir and type
+set buildDirectory $srcdir"/build/"$argv[1]
+set buildType (capitalize $argv[1])
+
+# remove build and binaries
+rm -rf $srcdir/bin $buildDirectory ;and mkdir -p $buildDirectory
+
+# recreate Makefile
+cmake -DCMAKE_BUILD_TYPE=$buildType -H$srcdir -B$buildDirectory
+
+# build and install
+cd $buildDirectory;and make -j (nproc)
