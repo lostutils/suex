@@ -1,0 +1,4 @@
+#!/usr/bin/env fish
+
+
+cd $ROOTDIR/build;and make clean ;and make -j (nproc)

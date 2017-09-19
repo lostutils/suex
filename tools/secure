@@ -1,0 +1,2 @@
+#!/usr/bin/env fish
+cd $ROOTDIR/build;and eval (which sudo) make secure

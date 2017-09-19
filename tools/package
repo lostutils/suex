@@ -1,0 +1,2 @@
+#!/usr/bin/env fish
+cd $ROOTDIR/build;and make -j (nproc) package

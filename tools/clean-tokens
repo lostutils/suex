@@ -1,0 +1,2 @@
+#!/usr/bin/env fish
+and eval (which sudo) rm -rf /var/run/doas

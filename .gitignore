@@ -1,0 +1,50 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+*.cbp
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Editors
+.idea
+
+# binary dir
+bin/
+build/
+deps/re2/lib
+
+# man
+man/doas.1
+man/doas.conf.5
+man/*.html
+
+# tools
+.direnv
+pkg/
