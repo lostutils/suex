@@ -1,6 +1,16 @@
 #include <utils.h>
 #include <iomanip>
 
+
+std::string cmdargv_txt(const std::vector<char *> &cmdargv) {
+    std::stringstream ss;
+    for (int i = 0; i < cmdargv.size(); ++i) {
+        std::string suffix = cmdargv[i + 1] != nullptr ? " " : "";
+        ss << cmdargv[i] << suffix;
+    }
+    return ss.str();
+}
+
 void validate_binary(const std::string &path) {
     struct stat fstat{};
 
@@ -34,22 +44,19 @@ bool can_execute(const User &user, const Group &group, const std::string &cmd,
 
 }
 
-bool hasperm(const Permissions &permissions, User &user, Group &group, char *const cmdargs[]) {
+bool hasperm(Permissions &permissions, User &user, Group &group, const std::vector<char *> cmdargv) {
 
-    std::string cmd = cmdargs[0];
+    std::string cmd = std::string(cmdargv.front());
 
     struct stat fstat{};
     if (stat(DEFAULT_CONFIG_PATH, &fstat) != 0) {
         throw std::runtime_error(cmd + " : " + std::strerror(errno));
     }
 
-    std::stringstream ss{cmd, std::ios_base::app | std::ios_base::out};
-    for (int i = 1; cmdargs[i] != nullptr; i++) {
-        ss << " " << cmdargs[i];
-    }
 
+    std::string cmdtxt {cmdargv_txt(cmdargv)};
     for (const ExecutablePermissions &perm : permissions) {
-        if (can_execute(user, group, ss.str(), perm)) {
+        if (can_execute(user, group, cmdtxt, perm)) {
             return true;
         }
     }

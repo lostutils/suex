@@ -43,11 +43,12 @@ add_dependencies(libre2 re2)
 #------------ end of google libre2 ------------------
 
 file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.cpp")
-include_directories(include ${RE2_ROOT_DIR}/include)
+#include_directories(include ${RE2_ROOT_DIR}/include)
+include_directories(include)
 add_executable(doas ${SOURCE_FILES})
 
 install(TARGETS doas
         PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_EXECUTE SETUID
         RUNTIME DESTINATION bin)
 
-target_link_libraries(doas libre2)
+#target_link_libraries(doas libre2)
