@@ -8,36 +8,36 @@
 
 namespace logger {
 
-    enum Type {
-        DEBUG,
-        INFO,
-        WARNING,
-        ERROR
-    };
+enum Type {
+  DEBUG,
+  INFO,
+  WARNING,
+  ERROR
+};
 
-    class Logger {
-    public:
-        explicit Logger(Type type);
+class Logger {
+ public:
+  explicit Logger(Type type);
 
-        Logger(const Logger &other);
+  Logger(const Logger &other);
 
-        ~Logger();
+  ~Logger();
 
-        std::ostream &operator<<(const char *text);
+  std::ostream &operator<<(const char *text);
 
-        std::ostream &operator<<(std::string &text);
+  std::ostream &operator<<(std::string &text);
 
-    private:
-        User _user{};
-        std::string _name;
-        Type _type;
-        std::ofstream _fs;
-    };
+ private:
+  User user_{};
+  std::string name_;
+  Type type_;
+  std::ofstream fs_;
+};
 
-    static Logger debug = Logger(Type::DEBUG);
-    static Logger info = Logger(Type::INFO);
-    static Logger warning = Logger(Type::WARNING);
-    static Logger error = Logger(Type::ERROR);
+static Logger debug = Logger(Type::DEBUG);
+static Logger info = Logger(Type::INFO);
+static Logger warning = Logger(Type::WARNING);
+static Logger error = Logger(Type::ERROR);
 }
 
 

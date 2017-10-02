@@ -2,7 +2,9 @@
 
 #include <string>
 
-std::string getpath(const std::string &path, bool searchInPath);
+const std::string GetPath(const std::string &path, bool searchInPath);
 
-const std::string realpath(std::string &path);
+const std::string RealPath(const std::string &path);
+
+const std::string LocatePath(const std::string &path, bool searchInPath);
 

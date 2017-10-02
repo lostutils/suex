@@ -6,48 +6,47 @@
 #include <sys/stat.h>
 
 class User {
-public:
-    explicit User() = default;
+ public:
+  explicit User() = default;
 
-    explicit User(uid_t uid);
+  explicit User(uid_t uid);
 
-    explicit User(const std::string &user);
+  explicit User(const std::string &user);
 
-    const std::string name() const { return _pw_name; };
+  const std::string Name() const { return pw_name_; };
 
-    const uid_t id() const { return _pw_uid; };
+  const uid_t Id() const { return pw_uid_; };
 
-    const gid_t gid() const { return _pw_gid; };
+  const gid_t GroupId() const { return pw_gid_; };
 
-    const std::string dir() const { return _pw_dir; };
+  const std::string Directory() const { return pw_dir_; };
 
-    bool exists();
+  bool Exists();
 
-private:
-    std::string _pw_name;
-    uid_t _pw_uid{};
-    gid_t _pw_gid{};
-    std::string _pw_dir;
+ private:
+  std::string pw_name_;
+  uid_t pw_uid_{};
+  gid_t pw_gid_{};
+  std::string pw_dir_;
 };
-
 
 class Group {
-public:
-    explicit Group(gid_t gid);
+ public:
+  explicit Group(gid_t gid);
 
-    explicit Group(const std::string &grp, User &user);
+  explicit Group(const std::string &grp, User &user);
 
-    const std::string name() { return _gr_name; };
+  const std::string &Name() const { return gr_name_; };
 
-    uid_t id() const { return _gr_gid; };
+  const uid_t &Id() const { return gr_gid_; };
 
-    bool exists();
+  bool Exists();
 
-private:
-    gid_t _gr_gid;
-    std::string _gr_name;
+ private:
+  gid_t gr_gid_;
+  std::string gr_name_;
 };
 
-void setperm(User &user, Group &grp);
+void SetPermissions(const User &user, const Group &grp);
 
-int permbits(struct stat &fstat);
+int PermissionBits(const struct stat &fstat);
