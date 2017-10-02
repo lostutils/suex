@@ -4,7 +4,6 @@
 #include <iostream>
 #include <regex>
 
-#define DEFAULT_CONFIG_PATH "/etc/doas.conf"
 
 class ExecutablePermissions {
 public:
@@ -31,7 +30,7 @@ private:
 
 class Permissions {
 public:
-    void load(std::string &path);
+    Permissions(const std::string &path);
 
     const std::vector<ExecutablePermissions>::const_iterator begin() const;
 
@@ -48,13 +47,13 @@ private:
     // if that looks weird, a full explanation in the cpp file
     std::regex quote_re = std::regex(R"(('|")(?!\\))");
 
-    bool exists(std::string &path) const;
+    bool exists(const std::string &path) const;
 
-    void create(std::string &path) const;
+    void create(const std::string &path) const;
 
-    void populate_permissions(std::smatch &matches);
+    void populate_permissions(const std::smatch &matches);
 
-    void validate_permissions(std::string &path) const;
+    void validate_permissions(const std::string &path) const;
 
     void parse(std::string &line);
 };

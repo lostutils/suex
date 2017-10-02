@@ -3,7 +3,7 @@
 #include <path.h>
 #include <zconf.h>
 
-void Permissions::validate_permissions(std::string &path) const {
+void Permissions::validate_permissions(const std::string &path) const {
     struct stat fstat{};
     stat(path.c_str(), &fstat);
 
@@ -31,7 +31,7 @@ const std::vector<ExecutablePermissions>::const_iterator Permissions::end() cons
     return _perms.cend();
 }
 
-void Permissions::create(std::string &path) const {
+void Permissions::create(const std::string &path) const {
     std::fstream fs;
     fs.open(path, std::ios::out);
 
@@ -47,14 +47,14 @@ void Permissions::create(std::string &path) const {
     fs.close();
 }
 
-bool Permissions::exists(std::string &path) const {
+bool Permissions::exists(const std::string &path) const {
     std::ifstream f(path);
     bool exists = f.good();
     f.close();
     return exists;
 }
 
-void Permissions::load(std::string &path) {
+Permissions::Permissions(const std::string &path) {
     // create the file if it doesn't exist,
     // and set the right ownership and permission bits.
     if (!exists(path)) {
@@ -96,7 +96,7 @@ std::vector<User> &addUsers(const std::string &user, std::vector<User> &users) {
     return users;
 }
 
-void Permissions::populate_permissions(std::smatch &matches) {
+void Permissions::populate_permissions(const std::smatch &matches) {
 
     // <user-or-group> -> <dest-user>:<dest-group> ::
     // <path-to-executable-and-args>

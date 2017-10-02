@@ -3,25 +3,31 @@
 #include <perm.h>
 #include <iostream>
 
+#define DEFAULT_CONFIG_PATH "/etc/doas.conf"
+
 class Options {
 public:
     Options(int argc, char *argv[]);
 
-    char *const * cmdargv() const {
-        return _args.data();
+    char *const * CommandArguments() const {
+        return args_.data();
     }
 
-    User& me() { return _me; }
+    std::string &ConfigurationPath() { return config_path_;  }
 
-    User& as_user() { return _user; }
+    User& Me() { return me_; }
 
-    Group& as_group() { return _group; }
+    User& AsUser() { return user_; }
+
+    Group& AsGroup() { return group_; }
 
 private:
-    int parse(int argc, char *argv[]);
-
-    std::vector<char *> _args{};
-    User _me = User(getuid());
-    User _user = User(0);
-    Group _group = Group(0);
+    int Parse(int argc, char **argv);
+    void ParsePermissions(const std::string &perms);
+    std::vector<char *> args_{};
+    std::string config_path_ { DEFAULT_CONFIG_PATH };
+    std::string binary_{};
+    User me_ = User(getuid());
+    User user_ = User(0);
+    Group group_ = Group(0);
 };

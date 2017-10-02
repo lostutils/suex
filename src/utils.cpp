@@ -1,5 +1,6 @@
 #include <utils.h>
 #include <iomanip>
+#include <options.h>
 
 
 std::string cmdargv_txt(char * const cmdargv[]) {
@@ -47,12 +48,6 @@ bool can_execute(const User &user, const Group &group, const std::string &cmd,
 bool hasperm(Permissions &permissions, User &user, Group &group, char * const cmdargv[]) {
 
     std::string cmd = std::string(*cmdargv);
-
-    struct stat fstat{};
-    if (stat(DEFAULT_CONFIG_PATH, &fstat) != 0) {
-        throw std::runtime_error(cmd + " : " + std::strerror(errno));
-    }
-
 
     std::string cmdtxt {cmdargv_txt(cmdargv)};
     for (const ExecutablePermissions &perm : permissions) {

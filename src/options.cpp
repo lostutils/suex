@@ -1,22 +1,20 @@
 #include <sstream>
 #include <zconf.h>
 #include <path.h>
+#include <cstring>
 #include "options.h"
 
 Options::Options(int argc, char *argv[]) {
-    int idx = parse(argc, argv);
-    _args = std::vector<char *> {argv + idx, argv + argc};
+    int idx = Parse(argc, argv);
+    args_ = std::vector<char *> {argv + idx, argv + argc};
     // low level c code needs an indication when an array of pointers ends
-    _args.emplace_back((char *) nullptr);
-    //
-
-    _args.emplace(_args.begin() + 1, (char*) getpath(_args.front(), true).c_str());
-    _args.erase(_args.begin());
+    args_.emplace_back((char *) nullptr);
+    binary_ = getpath(args_.front(), true);
+    args_.front() = (char*)binary_.c_str();
 }
 
-int Options::parse(int argc, char *argv[]) {
+int Options::Parse(int argc, char **argv) {
     int app_argc, c;
-    User running_user{getuid()};
 
     for (app_argc = 1; app_argc < argc; ++app_argc) {
         if (argv[app_argc][0] != '-') {
@@ -25,7 +23,7 @@ int Options::parse(int argc, char *argv[]) {
     }
 
     while (true) {
-        c = getopt(app_argc + 1, argv, "u:");
+        c = getopt(app_argc + 1, argv, "u:C:Lns");
 
         /* Detect the end of the options. */
         if (c == -1)
@@ -33,37 +31,44 @@ int Options::parse(int argc, char *argv[]) {
 
         switch (c) {
             case 'u': {
-
-                const std::string perms(optarg);
-                // extract the username and group
-                // if <username>:<group-name> passed, update username string to <username>
-                unsigned long delimIdx = perms.find(':');
-                const std::string grpname(delimIdx != perms.npos ? perms.substr(delimIdx + 1) : "");
-                const std::string username = grpname.empty() ? perms : perms.substr(0, delimIdx);
-                _user = User(username);
-
-                if (!_user.exists()) {
-                    std::stringstream ss;
-                    ss << "'" << running_user.name() << "' can't run: user '" << username << "' doesn't exist";
-                    throw std::runtime_error(ss.str());
-                }
-
-                // load destination group and check that it exists
-                _group = Group(grpname, _user);
-                if (!_group.exists()) {
-                    std::stringstream ss;
-                    ss << "'" << running_user.name() << "' can't run: group '" << grpname << " ""' doesn't exist";
-                    throw std::runtime_error(ss.str());
-                }
-
+                std::string perms(optarg);
+                ParsePermissions(perms);
                 break;
             }
+            case 'C': {
+               config_path_ = std::string(optarg);
+            }
+
             case '?':
                 break;
             default:
                 abort();
         }
     }
+
     return optind;
+}
+
+void Options::ParsePermissions(const std::string &perms) {
+    // extract the username and group
+    // if <username>:<group-name> passed, update username string to <username>
+    unsigned long delimIdx = perms.find(':');
+    const std::string grpname(delimIdx != perms.npos ? perms.substr(delimIdx + 1) : "");
+    const std::string username = grpname.empty() ? perms : perms.substr(0, delimIdx);
+    user_ = User(username);
+
+    if (!user_.exists()) {
+        std::stringstream ss;
+        ss << "'" << me_.name() << "' can't run: user '" << username << "' doesn't exist";
+        throw std::runtime_error(ss.str());
+    }
+
+    // load destination group and check that it exists
+    group_ = Group(grpname, user_);
+    if (!group_.exists()) {
+        std::stringstream ss;
+        ss << "'" << me_.name() << "' can't run: group '" << grpname << " ""' doesn't exist";
+        throw std::runtime_error(ss.str());
+    }
 }
 
