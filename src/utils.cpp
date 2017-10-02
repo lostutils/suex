@@ -2,9 +2,9 @@
 #include <iomanip>
 
 
-std::string cmdargv_txt(const std::vector<char *> &cmdargv) {
+std::string cmdargv_txt(char * const cmdargv[]) {
     std::stringstream ss;
-    for (int i = 0; i < cmdargv.size(); ++i) {
+    for (int i = 0; cmdargv[i] != nullptr; ++i) {
         std::string suffix = cmdargv[i + 1] != nullptr ? " " : "";
         ss << cmdargv[i] << suffix;
     }
@@ -44,9 +44,9 @@ bool can_execute(const User &user, const Group &group, const std::string &cmd,
 
 }
 
-bool hasperm(Permissions &permissions, User &user, Group &group, const std::vector<char *> cmdargv) {
+bool hasperm(Permissions &permissions, User &user, Group &group, char * const cmdargv[]) {
 
-    std::string cmd = std::string(cmdargv.front());
+    std::string cmd = std::string(*cmdargv);
 
     struct stat fstat{};
     if (stat(DEFAULT_CONFIG_PATH, &fstat) != 0) {

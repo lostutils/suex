@@ -8,10 +8,10 @@ Options::Options(int argc, char *argv[]) {
     _args = std::vector<char *> {argv + idx, argv + argc};
     // low level c code needs an indication when an array of pointers ends
     _args.emplace_back((char *) nullptr);
+    //
 
-    _cmd = std::string{getpath(_args[0], true)};
-    _args[0] = const_cast<char *>(_cmd.c_str());
-
+    _args.emplace(_args.begin() + 1, (char*) getpath(_args.front(), true).c_str());
+    _args.erase(_args.begin());
 }
 
 int Options::parse(int argc, char *argv[]) {
