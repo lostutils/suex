@@ -102,16 +102,22 @@ void Permissions::ParseLine(const std::string &line) {
 
   std::smatch opt_matches;
   const std::string m  { matches[3].str()};
-  bool permit = matches[1] == "permit";
+  bool deny = matches[1] == "deny";
+
   bool nopass {false};
+  bool keepenv {false};
 
   if (std::regex_search(m, opt_matches, opt_re_)) {
     for (const auto &opt_match : opt_matches) {
       if (opt_match == "nopass") {
         nopass = true;
       }
+      if (opt_match == "keepenv") {
+        keepenv = true;
+      }
     }
   }
+
   // first match is a user or group this line refers to
   // a string that starts with a '%' is a group (like in /etc/sudoers)
   for (User &user : AddUsers(matches[4], users)) {
@@ -152,7 +158,7 @@ void Permissions::ParseLine(const std::string &line) {
 
   // populate the permissions vector
   for (User &user : users) {
-    perms_.emplace_back(ExecutablePermissions(user, as_user, permit, nopass, cmd_re, line));
+    perms_.emplace_back(ExecutablePermissions(user, as_user, deny, nopass, keepenv, cmd_re, line));
   }
 }
 

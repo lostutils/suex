@@ -7,38 +7,41 @@
 
 int Do(const Permissions &permissions, const Options &opts, const Environment &env) {
 
-  char *const *cmdargv = opts.CommandArguments();
-
-  // check in the configuration if the destination user can run the command with the requested permissions
+  char *const *cmdargv{opts.CommandArguments()};
   std::string cmd_txt{CommandArgsText(cmdargv)};
+  char *const *envp = env.Raw();
 
-  auto perm = permissions.Get(opts.AsUser(), cmdargv);
-  if ((perm != nullptr && !perm->Permit()) ||
-      (perm == nullptr && !BypassPermissions(opts.AsUser()))) {
-    std::stringstream ss;
-    ss << "You can't execute '" << cmd_txt <<
-       "' as " << opts.AsUser().Name()
-       << ": " << std::strerror(EPERM);
-    throw std::runtime_error(ss.str());
-  }
+  if (!BypassPermissions(opts.AsUser())) {
+    auto perm = permissions.Get(opts.AsUser(), cmdargv);
+    if (perm == nullptr || perm->Deny()) {
+      std::stringstream ss;
+      ss << "You can't execute '" << cmd_txt <<
+         "' as " << opts.AsUser().Name()
+         << ": " << std::strerror(EPERM);
+      throw std::runtime_error(ss.str());
+    }
 
-  if (perm != nullptr && perm->PromptForPassword()) {
-    bool authenticated = false;
-    int attempts {3};
-    for (int i = 0; i < attempts && !authenticated; ++i) {
-      authenticated = Authenticate();
+    if (perm->PromptForPassword()) {
+      bool authenticated = false;
+      int attempts{3};
+      for (int i = 0; i < attempts && !authenticated; ++i) {
+        authenticated = Authenticate();
+        if (!authenticated) {
+          std::cerr << "Sorry, try again." << std::endl;
+        }
+      }
       if (!authenticated) {
-        std::cerr << "Sorry, try again." << std::endl;
+        std::stringstream ss;
+        ss << attempts << " incorrect password attempts" << std::endl;
+        throw std::runtime_error(ss.str());
+
+      }
+
+      if (!perm->KeepEnvironment()) {
+        envp = {nullptr};
       }
     }
-    if (!authenticated) {
-      std::stringstream ss;
-      ss << attempts << " incorrect password attempts" << std::endl;
-      throw std::runtime_error(ss.str());
-
-    }
   }
-
   // update the HOME env according to the as_user dir
   setenv("HOME", opts.AsUser().HomeDirectory().c_str(), 1);
 
@@ -46,7 +49,7 @@ int Do(const Permissions &permissions, const Options &opts, const Environment &e
   SetPermissions(opts.AsUser());
 
   // execute with uid and gid. path lookup is done internally, so execvp is not needed.
-  execvpe(cmdargv[0], &cmdargv[0], env.Raw());
+  execvpe(cmdargv[0], &cmdargv[0], envp);
 
   // will not get here unless execvp failed
   throw std::runtime_error(cmd_txt + " : " + std::strerror(errno));
