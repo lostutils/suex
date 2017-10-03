@@ -13,13 +13,11 @@ int Do(const Permissions &permissions, const Options &opts, const Environment &e
   // check in the configuration if the destination user can run the command with the requested permissions
   std::string cmd_txt{CommandArgsText(cmdargv)};
 
-  auto perm = permissions.Get(opts.AsUser(),
-                              opts.AsGroup(),
-                              cmdargv);
-  if (perm == nullptr && !BypassPermissions(opts.AsUser(), opts.AsGroup())) {
+  auto perm = permissions.Get(opts.AsUser(), cmdargv);
+  if (perm == nullptr && !BypassPermissions(opts.AsUser())) {
     std::stringstream ss;
     ss << "You can't execute '" << cmd_txt <<
-       "' as '" << opts.AsUser().Name() << ":" << opts.AsGroup().Name()
+       "' as '" << opts.AsUser().Name()
        << "': " << std::strerror(EPERM);
     throw std::runtime_error(ss.str());
   }
@@ -28,7 +26,7 @@ int Do(const Permissions &permissions, const Options &opts, const Environment &e
   setenv("HOME", opts.AsUser().HomeDirectory().c_str(), 1);
 
   // set permissions to requested id and gid
-  SetPermissions(opts.AsUser(), opts.AsGroup());
+  SetPermissions(opts.AsUser());
 
   // execute with uid and gid. path lookup is done internally, so execvp is not needed.
   execvpe(cmdargv[0], &cmdargv[0], env.Raw());
@@ -51,9 +49,7 @@ int main(int argc, char *argv[], char *envp[]) {
     // check that the running binary has the right permissions
     // i.e: suid is set and owned by root:root
     ValidateBinary(GetPath(*argv, true));
-    std::cout << Authenticate() << std::endl;
-    std::cout << Authenticate() << std::endl;
-    std::cout << Authenticate() << std::endl;
+
     // load the arguments into a vector, then add a null at the end,
     // to have an indication when the vector ends
     Options opts{argc, argv};

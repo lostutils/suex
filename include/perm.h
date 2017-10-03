@@ -49,6 +49,6 @@ class Group {
   std::string gr_name_;
 };
 
-void SetPermissions(const User &user, const Group &grp);
+void SetPermissions(const User &user);
 
 int PermissionBits(const struct stat &fstat);

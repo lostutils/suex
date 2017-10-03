@@ -26,7 +26,7 @@ void ValidateBinary(const std::string &path) {
   }
 }
 
-bool BypassPermissions(const User &as_user, const Group &as_group) {
+bool BypassPermissions(const User &as_user) {
 
   // if the user / grp is root, just let them run.
   if (running_user.Id() == 0 && running_user.GroupId() == 0) {
@@ -35,7 +35,7 @@ bool BypassPermissions(const User &as_user, const Group &as_group) {
 
   // if the user / grp are the same as the running user,
   // just run the app without performing any operations
-  return running_user.Id() == as_user.Id() && running_user.GroupId() == as_group.Id();
+  return running_user.Id() == as_user.Id() && running_user.GroupId() == as_user.GroupId();
 
 }
 

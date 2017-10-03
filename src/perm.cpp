@@ -3,14 +3,14 @@
 #include <vector>
 #include <sstream>
 
-int setgroups(const User &user, const Group &grp) {
+int setgroups(const User &user) {
   // walk through all the groups that a user has and set them
   int ngroups = 0;
   const char *name = user.Name().c_str();
   std::vector<gid_t> groupvec;
 
   while (true) {
-    if (getgrouplist(name, grp.Id(), &groupvec.front(), &ngroups) < 0) {
+    if (getgrouplist(name, user.GroupId(), &groupvec.front(), &ngroups) < 0) {
       groupvec.resize(static_cast<unsigned long>(ngroups));
       continue;
     }
@@ -18,16 +18,16 @@ int setgroups(const User &user, const Group &grp) {
   }
 }
 
-void SetPermissions(const User &user, const Group &grp) {
-  if (setgroups(user, grp) < 0) {
+void SetPermissions(const User &user) {
+  if (setgroups(user) < 0) {
     std::stringstream ss;
-    ss << "execution of setgroups(" << grp.Id() << ") failed";
+    ss << "execution of setgroups(" << user.GroupId() << ") failed";
     throw std::runtime_error(ss.str());
   }
 
-  if (setgid(grp.Id()) < 0) {
+  if (setgid(user.GroupId()) < 0) {
     std::stringstream ss;
-    ss << "execution of setgid(" << grp.Id() << ") failed";
+    ss << "execution of setgid(" << user.GroupId() << ") failed";
     throw std::runtime_error(ss.str());
   }
 

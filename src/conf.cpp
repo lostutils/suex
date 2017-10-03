@@ -68,7 +68,7 @@ Permissions::Permissions(const std::string &path) {
 }
 
 std::vector<User> &AddUsers(const std::string &user, std::vector<User> &users) {
-  if (user[0] != '%') {
+  if (user[0] != ':') {
     users.emplace_back(User(user));
     return users;
   }
@@ -95,7 +95,7 @@ void Permissions::PopulatePermissions(const std::smatch &matches) {
 
   // first match is a user or group this line refers to
   // a string that starts with a '%' is a group (like in /etc/sudoers)
-  for (User &user : AddUsers(matches[1], users)) {
+  for (User &user : AddUsers(matches[4], users)) {
     if (!user.Exists()) {
       std::stringstream ss;
       throw std::runtime_error("origin user doesn't exist");
@@ -103,22 +103,15 @@ void Permissions::PopulatePermissions(const std::smatch &matches) {
   }
 
   // extract the destination user
-  User as_user = User(matches[2]);
+  User as_user = User(matches[6]);
   if (!as_user.Exists()) {
-    throw std::runtime_error("dest user doesn't exist");
-  }
-
-  // extract the destination group
-  Group as_group = Group(matches[4], as_user);
-  if (!as_group.Exists()) {
-    throw std::runtime_error("dest group doesn't exist");
+    throw std::runtime_error("destination user doesn't exist");
   }
 
   // extract the executable path.
   // don't try to locate the path in $PATH
-
-  std::string cmd = GetPath(matches[5], false);
-  std::string args = matches[7];
+  std::string cmd = GetPath(matches[10], false);
+  std::string args = matches[12];
 
   // if no args are passed, the user can execute *any* args
   // we remove single quotes because these don't actually exists,
@@ -136,11 +129,11 @@ void Permissions::PopulatePermissions(const std::smatch &matches) {
   cmd += args.empty() ? ".*" : "\\s+" + args;
 
   logger::debug << "command is: " << cmd << std::endl;
-  std::regex cmd_re = std::regex(cmd);
+  std::regex line_re = std::regex(cmd);
 
   // populate the permissions vector
   for (User &user : users) {
-    perms_.emplace_back(ExecutablePermissions(user, as_user, as_group, cmd_re));
+    perms_.emplace_back(ExecutablePermissions(user, as_user, line_re));
   }
 }
 
@@ -159,7 +152,7 @@ void Permissions::Parse(const std::string &line) {
 
   logger::debug << "parsing line: " << line << std::endl;
   try {
-    if (!std::regex_search(line, matches, line_re_)) {
+    if (!std::regex_search(line, matches, bsd_re_)) {
       throw std::runtime_error("couldn't parse line");
     }
     PopulatePermissions(matches);
@@ -168,28 +161,24 @@ void Permissions::Parse(const std::string &line) {
     logger::error << "config error, skipping - " << e.what() << " [" << line << "]" << std::endl;
   }
 }
-const ExecutablePermissions *Permissions::Get(const User &user, const Group &group, char *const *cmdargv)const {
+const ExecutablePermissions *Permissions::Get(const User &user, char *const *cmdargv)const {
   std::string cmd = std::string(*cmdargv);
   std::string cmdtxt{CommandArgsText(cmdargv)};
   auto it = perms_.cbegin();
   for (it; it != perms_.cend(); ++it) {
-    if (it->CanExecute(user, group, cmdtxt)) {
+    if (it->CanExecute(user, cmdtxt)) {
       return &*it;
     }
   }
   return nullptr;
 }
 
-bool ExecutablePermissions::CanExecute(const User &user, const Group &group, const std::string &cmd)const {
+bool ExecutablePermissions::CanExecute(const User &user, const std::string &cmd)const {
   if (Me().Id() != getuid()) {
     return false;
   }
 
   if (AsUser().Id() != user.Id()) {
-    return false;
-  }
-
-  if (AsGroup().Id() != group.Id()) {
     return false;
   }
 

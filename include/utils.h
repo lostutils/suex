@@ -7,7 +7,7 @@ std::string CommandArgsText(char *const *cmdargv);
 
 void ValidateBinary(const std::string &path);
 
-bool BypassPermissions(const User &as_user, const Group &as_group);
+bool BypassPermissions(const User &as_user);
 
 const std::string Iso8601();
 

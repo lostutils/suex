@@ -31,8 +31,7 @@ int Options::Parse(int argc, char **argv) {
 
     switch (c) {
       case 'u': {
-        std::string perms(optarg);
-        ParsePermissions(perms);
+        ParsePermissions(optarg);
         break;
       }
       case 'C': {
@@ -47,26 +46,14 @@ int Options::Parse(int argc, char **argv) {
   return optind;
 }
 
-void Options::ParsePermissions(const std::string &perms) {
+void Options::ParsePermissions(const std::string &username) {
 
   // extract the username and group
-  // if <username>:<group-name> passed, update username string to <username>
-  unsigned long delimIdx = perms.find(':');
-  const std::string grpname(delimIdx != perms.npos ? perms.substr(delimIdx + 1) : "");
-  const std::string username = grpname.empty() ? perms : perms.substr(0, delimIdx);
   user_ = User(username);
 
   if (!user_.Exists()) {
     std::stringstream ss;
     ss << "'" << user_.Name() << "' can't run: user '" << username << "' doesn't exist";
-    throw std::runtime_error(ss.str());
-  }
-
-  // load destination group and check that it exists
-  group_ = Group(grpname, user_);
-  if (!group_.Exists()) {
-    std::stringstream ss;
-    ss << "'" << user_.Name() << "' can't run: group '" << grpname << " ""' doesn't exist";
     throw std::runtime_error(ss.str());
   }
 }
