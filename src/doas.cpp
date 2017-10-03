@@ -2,7 +2,6 @@
 #include <logger.h>
 #include <options.h>
 #include <version.h>
-#include <path.h>
 #include <env.h>
 #include <auth.h>
 
@@ -14,12 +13,30 @@ int Do(const Permissions &permissions, const Options &opts, const Environment &e
   std::string cmd_txt{CommandArgsText(cmdargv)};
 
   auto perm = permissions.Get(opts.AsUser(), cmdargv);
-  if (perm == nullptr && !BypassPermissions(opts.AsUser())) {
+  if ((perm != nullptr && !perm->Permit()) ||
+      (perm == nullptr && !BypassPermissions(opts.AsUser()))) {
     std::stringstream ss;
     ss << "You can't execute '" << cmd_txt <<
-       "' as '" << opts.AsUser().Name()
-       << "': " << std::strerror(EPERM);
+       "' as " << opts.AsUser().Name()
+       << ": " << std::strerror(EPERM);
     throw std::runtime_error(ss.str());
+  }
+
+  if (perm != nullptr && perm->PromptForPassword()) {
+    bool authenticated = false;
+    int attempts {3};
+    for (int i = 0; i < attempts && !authenticated; ++i) {
+      authenticated = Authenticate();
+      if (!authenticated) {
+        std::cerr << "Sorry, try again." << std::endl;
+      }
+    }
+    if (!authenticated) {
+      std::stringstream ss;
+      ss << attempts << " incorrect password attempts" << std::endl;
+      throw std::runtime_error(ss.str());
+
+    }
   }
 
   // update the HOME env according to the as_user dir

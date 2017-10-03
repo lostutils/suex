@@ -87,12 +87,31 @@ std::vector<User> &AddUsers(const std::string &user, std::vector<User> &users) {
   return users;
 }
 
-void Permissions::PopulatePermissions(const std::smatch &matches) {
+void Permissions::ParseLine(const std::string &line) {
 
+  logger::debug << "parsing: " << line << std::endl;
+
+  std::smatch matches;
+  if (!std::regex_search(line, matches, bsd_re_)) {
+    logger::debug << "couldn't parse: " << line << std::endl;
+    throw std::runtime_error("couldn't parse line");
+  }
   // <user-or-group> -> <dest-user>:<dest-group> ::
   // <path-to-executable-and-args>
   std::vector<User> users;
 
+  std::smatch opt_matches;
+  const std::string m  { matches[3].str()};
+  bool permit = matches[1] == "permit";
+  bool nopass {false};
+
+  if (std::regex_search(m, opt_matches, opt_re_)) {
+    for (const auto &opt_match : opt_matches) {
+      if (opt_match == "nopass") {
+        nopass = true;
+      }
+    }
+  }
   // first match is a user or group this line refers to
   // a string that starts with a '%' is a group (like in /etc/sudoers)
   for (User &user : AddUsers(matches[4], users)) {
@@ -110,30 +129,30 @@ void Permissions::PopulatePermissions(const std::smatch &matches) {
 
   // extract the executable path.
   // don't try to locate the path in $PATH
-  std::string cmd = GetPath(matches[10], false);
-  std::string args = matches[12];
+  std::string cmd_re {".+"};
+  if (matches[10] != ".+") {
+    cmd_re = GetPath(matches[10], true);
+    std::string args = matches[12];
 
-  // if no args are passed, the user can execute *any* args
-  // we remove single quotes because these don't actually exists,
-  // the shell concatenates single-quoted-wrapped strings
+    // if no args are passed, the user can execute *any* args
+    // we remove single quotes because these don't actually exists,
+    // the shell concatenates single-quoted-wrapped strings
 
-  if (!args.empty()) {
-    // the regex is reversed because c++11 doesn't support negative lookbehind.
-    // instead, the regex has been reversed to look ahead.
-    // this whole thing isn't too costly because the lines are short.
-    std::reverse(args.begin(), args.end());
-    args = std::regex_replace(args, quote_re_, "");
-    std::reverse(args.begin(), args.end());
+    if (!args.empty()) {
+      // the regex is reversed because c++11 doesn't support negative lookbehind.
+      // instead, the regex has been reversed to look ahead.
+      // this whole thing isn't too costly because the lines are short.
+      std::reverse(args.begin(), args.end());
+      args = std::regex_replace(args, quote_re_, "");
+      std::reverse(args.begin(), args.end());
+    }
+
+    cmd_re += args.empty() ? ".*" : "\\s+" + args;
   }
-
-  cmd += args.empty() ? ".*" : "\\s+" + args;
-
-  logger::debug << "command is: " << cmd << std::endl;
-  std::regex line_re = std::regex(cmd);
 
   // populate the permissions vector
   for (User &user : users) {
-    perms_.emplace_back(ExecutablePermissions(user, as_user, line_re));
+    perms_.emplace_back(ExecutablePermissions(user, as_user, permit, nopass, cmd_re, line));
   }
 }
 
@@ -150,13 +169,8 @@ void Permissions::Parse(const std::string &line) {
     return;
   }
 
-  logger::debug << "parsing line: " << line << std::endl;
   try {
-    if (!std::regex_search(line, matches, bsd_re_)) {
-      throw std::runtime_error("couldn't parse line");
-    }
-    PopulatePermissions(matches);
-
+    ParseLine(line);
   } catch (std::exception &e) {
     logger::error << "config error, skipping - " << e.what() << " [" << line << "]" << std::endl;
   }
@@ -183,5 +197,7 @@ bool ExecutablePermissions::CanExecute(const User &user, const std::string &cmd)
   }
 
   std::smatch matches;
-  return std::regex_match(cmd, matches, cmd_re_);
+  bool matched {std::regex_match(cmd, matches, cmd_re_)};
+  logger::debug <<  (matched ? "Y" : "N") << " " << raw_txt_ << " ~= " << cmd << std::endl;
+  return matched;
 }

@@ -25,7 +25,7 @@ class Logger {
 
   std::ostream &operator<<(const char *text);
 
-  std::ostream &operator<<(std::string &text);
+  std::ostream &operator<<(const std::string &text);
 
  private:
   User user_{};

@@ -7,7 +7,8 @@
 
 static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
 //^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(((:)?[a-z_][a-z0-9_-]*[$]?)(:([a-z_][a-z0-9_-]*[$]?))?|\*)\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?$
-static auto bsd_re_ = std::regex(R"(^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(((:)?[a-z_][a-z0-9_-]*[$]?)(:([a-z_][a-z0-9_-]*[$]?))?|\*)\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
+static auto bsd_re_ = std::regex(
+    R"(^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(((:)?[a-z_][a-z0-9_-]*[$]?)(:([a-z_][a-z0-9_-]*[$]?))?|\*)\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
 static auto line_re_ =
     std::regex(R"(^(%?[1-9a-zA-Z]+)\s->\s([1-9a-zA-Z]+)(:([1-9A-Za-z]+))?\s+::\s+([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
 static auto comment_re_ = std::regex(R"(^[\t|\s]*#.*)");
@@ -17,22 +18,35 @@ class ExecutablePermissions {
  public:
   explicit ExecutablePermissions(User &user,
                                  User &as_user,
-                                 std::regex &cmd_re) :
+                                 bool permit,
+                                 bool nopass,
+                                 const std::string &cmd_re,
+                                 const std::string &raw_txt) :
       user_{user},
       as_user_{as_user},
-      cmd_re_{cmd_re} {}
+      permit_{permit},
+      nopass_{nopass},
+      cmd_re_{cmd_re},
+      raw_txt_{raw_txt} {}
 
   const User &Me() const { return user_; };
 
   const User &AsUser() const { return as_user_; };
+
+  bool PromptForPassword() const { return !nopass_; };
+
+  bool Permit() const { return permit_; };
 
   bool CanExecute(const User &user, const std::string &cmd) const;
 
  private:
 
   User user_;
+  bool permit_;
+  bool nopass_;
   User as_user_;
   std::regex cmd_re_;
+  std::string raw_txt_;
 };
 
 class Permissions {
@@ -53,7 +67,7 @@ class Permissions {
 
   void Create(const std::string &path) const;
 
-  void PopulatePermissions(const std::smatch &matches);
+  void ParseLine(const std::string &line);
 
   void ValidatePermissions(const std::string &path) const;
 

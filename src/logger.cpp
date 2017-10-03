@@ -31,15 +31,29 @@ logger::Logger::~Logger() {
 }
 
 std::ostream &logger::Logger::operator<<(const char *text) {
-  std::string str{text};
-  *this << str;
-  return fs_;
-}
-
-std::ostream &logger::Logger::operator<<(std::string &text) {
   // don't log debug messages when the 'DOAS_DEBUG' flag is not set.
   if (!DebugMode() && type_ == logger::DEBUG) {
     return fs_;
+  }
+
+  std::string str{text};
+  *this << str;
+
+  if (type_ == logger::DEBUG) {
+    return std::cerr;
+  }
+  return fs_;
+}
+
+std::ostream &logger::Logger::operator<<(const std::string &text) {
+  // don't log debug messages when the 'DOAS_DEBUG' flag is not set.
+  if (!DebugMode() && type_ == logger::DEBUG) {
+    return fs_;
+  }
+
+  if (type_ == logger::DEBUG) {
+    std::cerr << text;
+    return std::cerr;
   }
 
   if (!fs_.is_open()) {
