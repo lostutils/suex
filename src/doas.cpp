@@ -51,8 +51,9 @@ int main(int argc, char *argv[], char *envp[]) {
     // check that the running binary has the right permissions
     // i.e: suid is set and owned by root:root
     ValidateBinary(GetPath(*argv, true));
-    bool a = Authenticate();
-    bool b = Authenticate();
+    std::cout << Authenticate() << std::endl;
+    std::cout << Authenticate() << std::endl;
+    std::cout << Authenticate() << std::endl;
     // load the arguments into a vector, then add a null at the end,
     // to have an indication when the vector ends
     Options opts{argc, argv};

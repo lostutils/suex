@@ -8,23 +8,27 @@
 #include <sstream>
 
 struct pam_response *auth_reply;
-std::string prefix() {
+bool succeeded{false};
+
+std::string GetPasswordPrefix() {
   std::stringstream ss;
   ss << "[doas] password for " << running_user.Name() << ": ";
   return ss.str();
 }
 
 int GetPassword(int, const struct pam_message **, struct pam_response **resp, void *) {
-  auth_reply = (struct pam_response *) malloc(sizeof(struct pam_response));
-  auth_reply->resp = getpass(prefix().c_str());
+  auth_reply = new (struct pam_response);
+  auth_reply->resp = getpass(GetPasswordPrefix().c_str());
   auth_reply->resp_retcode = 0;
 
   *resp = auth_reply;
   return PAM_SUCCESS;
 };
 
-
 bool Authenticate() {
+  if (succeeded) {
+    return true;
+  }
   const struct pam_conv local_conversation = {GetPassword, nullptr};
   pam_handle_t *local_auth_handle = nullptr; // this gets set by pam_start
 
@@ -46,6 +50,6 @@ bool Authenticate() {
     return false;
   }
 
-  return pam_end(local_auth_handle, retval) == PAM_SUCCESS;
+  succeeded = pam_end(local_auth_handle, retval) == PAM_SUCCESS;
 }
 
