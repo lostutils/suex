@@ -58,7 +58,7 @@ void Options::ParsePermissions(const std::string &perms) {
 
   if (!user_.Exists()) {
     std::stringstream ss;
-    ss << "'" << me_.Name() << "' can't run: user '" << username << "' doesn't exist";
+    ss << "'" << user_.Name() << "' can't run: user '" << username << "' doesn't exist";
     throw std::runtime_error(ss.str());
   }
 
@@ -66,7 +66,7 @@ void Options::ParsePermissions(const std::string &perms) {
   group_ = Group(grpname, user_);
   if (!group_.Exists()) {
     std::stringstream ss;
-    ss << "'" << me_.Name() << "' can't run: group '" << grpname << " ""' doesn't exist";
+    ss << "'" << user_.Name() << "' can't run: group '" << grpname << " ""' doesn't exist";
     throw std::runtime_error(ss.str());
   }
 }

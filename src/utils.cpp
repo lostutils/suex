@@ -25,38 +25,7 @@ void ValidateBinary(const std::string &path) {
   }
 }
 
-bool can_execute(const User &user, const Group &group, const std::string &cmd,
-                 const ExecutablePermissions &perm) {
-  if (perm.Me().Id() != getuid()) {
-    return false;
-  }
-
-  if (perm.AsUser().Id() != user.Id()) {
-    return false;
-  }
-
-  if (perm.AsGroup().Id() != group.Id()) {
-    return false;
-  }
-
-  return perm.CompareCommand(cmd);
-
-}
-
-bool HasPermissions(const Permissions &permissions, const User &user, const Group &group, char *const *cmdargv) {
-
-  std::string cmd = std::string(*cmdargv);
-
-  std::string cmdtxt{CommandArgsText(cmdargv)};
-  for (const ExecutablePermissions &perm : permissions) {
-    if (can_execute(user, group, cmdtxt, perm)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool BypassPermissions(const User &running_user, const User &dest_user, const Group &dest_group) {
+bool BypassPermissions(const User &as_user, const Group &as_group) {
 
   // if the user / grp is root, just let them run.
   if (running_user.Id() == 0 && running_user.GroupId() == 0) {
@@ -65,7 +34,7 @@ bool BypassPermissions(const User &running_user, const User &dest_user, const Gr
 
   // if the user / grp are the same as the running user,
   // just run the app without performing any operations
-  return running_user.Id() == dest_user.Id() && running_user.GroupId() == dest_group.Id();
+  return running_user.Id() == as_user.Id() && running_user.GroupId() == as_group.Id();
 
 }
 

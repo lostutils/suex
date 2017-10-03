@@ -5,6 +5,8 @@
 
 #define DEFAULT_CONFIG_PATH "/etc/doas.conf"
 
+static const User running_user = User(getuid());
+
 class Options {
  public:
   Options(int argc, char *argv[]);
@@ -14,8 +16,6 @@ class Options {
   }
 
   const std::string &ConfigurationPath() const { return config_path_; }
-
-  const User &Me() const { return me_; }
 
   const User &AsUser() const { return user_; }
 
@@ -27,7 +27,7 @@ class Options {
   std::vector<char *> args_{};
   std::string config_path_{DEFAULT_CONFIG_PATH};
   std::string binary_{};
-  User me_ = User(getuid());
   User user_ = User(0);
   Group group_ = Group(0);
 };
+

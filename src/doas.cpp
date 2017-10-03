@@ -1,5 +1,4 @@
 #include <conf.h>
-#include <utils.h>
 #include <logger.h>
 #include <options.h>
 #include <version.h>
@@ -8,13 +7,15 @@
 
 int Do(const Permissions &permissions, const Options &opts, const Environment &env) {
 
-  char *const * cmdargv = opts.CommandArguments();
+  char *const *cmdargv = opts.CommandArguments();
 
   // check in the configuration if the destination user can run the command with the requested permissions
   std::string cmd_txt{CommandArgsText(cmdargv)};
 
-  if (!BypassPermissions(opts.Me(), opts.AsUser(), opts.AsGroup()) &&
-      !HasPermissions(permissions, opts.AsUser(), opts.AsGroup(), cmdargv)) {
+  auto perm = permissions.Get(opts.AsUser(),
+                              opts.AsGroup(),
+                              cmdargv);
+  if (perm == nullptr && !BypassPermissions(opts.AsUser(), opts.AsGroup())) {
     std::stringstream ss;
     ss << "You can't execute '" << cmd_txt <<
        "' as '" << opts.AsUser().Name() << ":" << opts.AsGroup().Name()
@@ -22,7 +23,7 @@ int Do(const Permissions &permissions, const Options &opts, const Environment &e
     throw std::runtime_error(ss.str());
   }
 
-  // update the HOME env according to the dest_user dir
+  // update the HOME env according to the as_user dir
   setenv("HOME", opts.AsUser().Directory().c_str(), 1);
 
   // set permissions to requested id and gid
@@ -35,7 +36,7 @@ int Do(const Permissions &permissions, const Options &opts, const Environment &e
   throw std::runtime_error(cmd_txt + " : " + std::strerror(errno));
 }
 
-int main(int argc, char *argv[], char* envp[]) {
+int main(int argc, char *argv[], char *envp[]) {
   try {
     // check that enough args were passed
     if (argc < 2) {
@@ -53,11 +54,12 @@ int main(int argc, char *argv[], char* envp[]) {
     // load the arguments into a vector, then add a null at the end,
     // to have an indication when the vector ends
     Options opts{argc, argv};
+
     // load the configuration from the default path
     Permissions permissions{opts.ConfigurationPath()};
 
     // load all the environment variables
-    Environment env { envp};
+    Environment env{envp};
 
     return Do(permissions, opts, env);
 

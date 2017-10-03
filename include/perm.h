@@ -4,6 +4,8 @@
 #include <pwd.h>
 #include <grp.h>
 #include <sys/stat.h>
+#include <zconf.h>
+
 
 class User {
  public:

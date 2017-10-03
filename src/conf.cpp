@@ -1,7 +1,6 @@
 #include <logger.h>
 #include <conf.h>
 #include <path.h>
-#include <zconf.h>
 
 void Permissions::ValidatePermissions(const std::string &path) const {
   struct stat fstat{};
@@ -23,14 +22,6 @@ void Permissions::ValidatePermissions(const std::string &path) const {
   }
 }
 
-const std::vector<ExecutablePermissions>::const_iterator Permissions::begin() const {
-  return perms_.cbegin();
-}
-
-const std::vector<ExecutablePermissions>::const_iterator Permissions::end() const {
-  return perms_.cend();
-}
-/**/
 void Permissions::Create(const std::string &path) const {
   std::fstream fs;
   fs.open(path, std::ios::out);
@@ -177,8 +168,31 @@ void Permissions::Parse(const std::string &line) {
     logger::error << "config error, skipping - " << e.what() << " [" << line << "]" << std::endl;
   }
 }
+const ExecutablePermissions *Permissions::Get(const User &user, const Group &group, char *const *cmdargv)const {
+  std::string cmd = std::string(*cmdargv);
+  std::string cmdtxt{CommandArgsText(cmdargv)};
+  auto it = perms_.cbegin();
+  for (it; it != perms_.cend(); ++it) {
+    if (it->CanExecute(user, group, cmdtxt)) {
+      return &*it;
+    }
+  }
+  return nullptr;
+}
 
-const bool ExecutablePermissions::CompareCommand(const std::string &cmd) const {
+bool ExecutablePermissions::CanExecute(const User &user, const Group &group, const std::string &cmd)const {
+  if (Me().Id() != getuid()) {
+    return false;
+  }
+
+  if (AsUser().Id() != user.Id()) {
+    return false;
+  }
+
+  if (AsGroup().Id() != group.Id()) {
+    return false;
+  }
+
   std::smatch matches;
   return std::regex_match(cmd, matches, cmd_re_);
 }
