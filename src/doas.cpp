@@ -25,7 +25,7 @@ int Do(const Permissions &permissions, const Options &opts, const Environment &e
   }
 
   // update the HOME env according to the as_user dir
-  setenv("HOME", opts.AsUser().Directory().c_str(), 1);
+  setenv("HOME", opts.AsUser().HomeDirectory().c_str(), 1);
 
   // set permissions to requested id and gid
   SetPermissions(opts.AsUser(), opts.AsGroup());

@@ -21,7 +21,7 @@ class User {
 
   const gid_t GroupId() const { return pw_gid_; };
 
-  const std::string Directory() const { return pw_dir_; };
+  const std::string HomeDirectory() const { return pw_dir_; };
 
   bool Exists();
 
