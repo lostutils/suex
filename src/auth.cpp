@@ -1,58 +1,106 @@
-
-#include <cstdio>
-#include <cstdlib>
+#include <auth.h>
 #include <cstring>
+#include <security/pam_misc.h>
 #include <options.h>
 #include <logger.h>
-#include <security/pam_appl.h>
 #include <sstream>
+#include <ctime>
 
-bool succeeded{false};
-
-std::string GetPasswordPrefix() {
+std::string GetFilename(const std::string &txt) {
   std::stringstream ss;
-  ss << "[doas] password for " << running_user.Name() << ": ";
+  ss << AUTH_CACHE_DIR << "/" << getsid(0) << "_" << std::hash<std::string>{}(txt);
   return ss.str();
 }
 
-int GetPassword(int, const struct pam_message **, struct pam_response **resp, void *response) {
-  *resp = (pam_response *)(response);
-  return PAM_SUCCESS;
-};
+time_t SetTimestamp(const std::string &filename) {
+  time_t ts { std::time(nullptr)};
+  std::ofstream f(filename);
+  f << ts;
+  f.close();
+  return ts;
+}
+
+time_t GetTimestamp(const std::string &filename) {
+  struct stat path_stat{};
+
+  // create the directory
+  if (stat(AUTH_CACHE_DIR, &path_stat) != 0) {
+    if (mkdir(AUTH_CACHE_DIR, S_IRUSR | S_IRGRP) < 0) {
+      throw std::runtime_error(std::strerror(errno));
+    }
+    if (chown(AUTH_CACHE_DIR, 0, 0) < 0) {
+      throw std::runtime_error(std::strerror(errno));
+    }
+    if (stat(AUTH_CACHE_DIR, &path_stat) != 0) {
+      throw std::runtime_error(std::strerror(errno));
+    }
+  }
+
+  if (!S_ISDIR(path_stat.st_mode)) {
+    throw std::runtime_error("not a directory");
+  }
+
+  if (stat(filename.c_str(), &path_stat) != 0) {
+    std::ofstream f(filename);
+    f << 0;
+    f.close();
+
+    if (chown(filename.c_str(), 0, 0) < 0) {
+      throw std::runtime_error(std::strerror(errno));
+    }
+    if (stat(filename.c_str(), &path_stat) != 0) {
+      throw std::runtime_error(std::strerror(errno));
+    }
+  }
+
+  if (!S_ISREG(path_stat.st_mode) ||
+    path_stat.st_uid != 0 || path_stat.st_gid != 0) {
+    throw std::runtime_error("wtf not a file");
+  }
+
+  std::ifstream f(filename);
+  time_t ts;
+  f >> ts;
+  return ts;
+}
 
 bool Authenticate(const std::string &service_name) {
-  if (succeeded) {
-    return true;
-  }
-  auto *response = new (struct pam_response);
-  response->resp = strdup("Xhxnt555");
-  response->resp_retcode = 0;
-  const struct pam_conv local_conversation = {GetPassword, (void *) response};
+  const struct pam_conv pam_conversation = {misc_conv, nullptr};
   pam_handle_t *handle = nullptr; // this gets set by pam_start
 
   int retval = pam_start(service_name.c_str(),
-                         running_user.Name().c_str(), &local_conversation, &handle);
-
+                         running_user.Name().c_str(),
+                         &pam_conversation,
+                         &handle);
 
   if (retval != PAM_SUCCESS) {
     logger::debug << "[pam]: pam_start returned: " << retval << std::endl;
     return false;
   }
 
-  retval = pam_setcred(handle,PAM_DELETE_CRED);
-  retval = pam_open_session(handle, 0);
-  retval = pam_authenticate(handle, PAM_DISALLOW_NULL_AUTHTOK);
-
+  retval = pam_authenticate(handle, 0);
   if (retval != PAM_SUCCESS) {
-    if (retval == PAM_AUTH_ERR) {
-      logger::debug << "[pam]: authentication failure" << std::endl;
-    } else {
-      logger::debug << "[pam]: pam_authenticate returned " << retval << std::endl;
-    }
+    logger::debug << "[pam]: pam_authenticate returned " << retval << std::endl;
     return false;
   }
-  retval = pam_close_session(handle,0);
-  succeeded = pam_end(handle, retval) == PAM_SUCCESS;
-  return succeeded;
-}
 
+  retval = pam_acct_mgmt(handle, 0);
+  if (retval != PAM_SUCCESS) {
+    logger::debug << "[pam]: pam_acct_mgmt returned " << retval << std::endl;
+    return false;
+  }
+
+  retval = pam_close_session(handle, 0);
+  if (retval != PAM_SUCCESS) {
+    logger::debug << "[pam]: pam_close_session returned " << retval << std::endl;
+    return false;
+  }
+  retval = pam_end(handle, retval);
+  if (retval != PAM_SUCCESS) {
+    logger::debug << "[pam]: pam_end returned " << retval << std::endl;
+    return false;
+  }
+
+  SetTimestamp();
+  return true;
+}

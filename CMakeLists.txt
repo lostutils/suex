@@ -52,4 +52,4 @@ install(TARGETS doas
         RUNTIME DESTINATION bin)
 
 #target_link_libraries(doas libre2)
-target_link_libraries(doas pam)
+target_link_libraries(doas pam pam_misc)
