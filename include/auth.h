@@ -1,3 +1,3 @@
 #pragma once
 
-bool Authenticate();
+bool Authenticate(const std::string &service_name);

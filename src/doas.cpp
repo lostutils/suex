@@ -25,7 +25,7 @@ int Do(const Permissions &permissions, const Options &opts, const Environment &e
       bool authenticated = false;
       int attempts{3};
       for (int i = 0; i < attempts && !authenticated; ++i) {
-        authenticated = Authenticate();
+        authenticated = Authenticate("common-auth");
         if (!authenticated) {
           std::cerr << "Sorry, try again." << std::endl;
         }

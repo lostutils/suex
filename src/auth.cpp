@@ -7,7 +7,6 @@
 #include <security/pam_appl.h>
 #include <sstream>
 
-struct pam_response *auth_reply;
 bool succeeded{false};
 
 std::string GetPasswordPrefix() {
@@ -16,40 +15,44 @@ std::string GetPasswordPrefix() {
   return ss.str();
 }
 
-int GetPassword(int, const struct pam_message **, struct pam_response **resp, void *) {
-  auth_reply = new (struct pam_response);
-  auth_reply->resp = getpass(GetPasswordPrefix().c_str());
-  auth_reply->resp_retcode = 0;
-
-  *resp = auth_reply;
+int GetPassword(int, const struct pam_message **, struct pam_response **resp, void *response) {
+  *resp = (pam_response *)(response);
   return PAM_SUCCESS;
 };
 
-bool Authenticate() {
+bool Authenticate(const std::string &service_name) {
   if (succeeded) {
     return true;
   }
-  const struct pam_conv local_conversation = {GetPassword, nullptr};
-  pam_handle_t *local_auth_handle = nullptr; // this gets set by pam_start
+  auto *response = new (struct pam_response);
+  response->resp = strdup("Xhxnt555");
+  response->resp_retcode = 0;
+  const struct pam_conv local_conversation = {GetPassword, (void *) response};
+  pam_handle_t *handle = nullptr; // this gets set by pam_start
 
-  int retval = pam_start("su", running_user.Name().c_str(), &local_conversation, &local_auth_handle);
+  int retval = pam_start(service_name.c_str(),
+                         running_user.Name().c_str(), &local_conversation, &handle);
+
 
   if (retval != PAM_SUCCESS) {
-    logger::debug << "pam_start returned: " << retval << std::endl;
+    logger::debug << "[pam]: pam_start returned: " << retval << std::endl;
     return false;
   }
 
-  retval = pam_authenticate(local_auth_handle, 0);
+  retval = pam_setcred(handle,PAM_DELETE_CRED);
+  retval = pam_open_session(handle, 0);
+  retval = pam_authenticate(handle, PAM_DISALLOW_NULL_AUTHTOK);
 
   if (retval != PAM_SUCCESS) {
     if (retval == PAM_AUTH_ERR) {
-      logger::debug << "Authentication failure" << std::endl;
+      logger::debug << "[pam]: authentication failure" << std::endl;
     } else {
-      logger::debug << "pam_authenticate returned " << retval << std::endl;
+      logger::debug << "[pam]: pam_authenticate returned " << retval << std::endl;
     }
     return false;
   }
-
-  succeeded = pam_end(local_auth_handle, retval) == PAM_SUCCESS;
+  retval = pam_close_session(handle,0);
+  succeeded = pam_end(handle, retval) == PAM_SUCCESS;
+  return succeeded;
 }
 
