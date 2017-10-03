@@ -48,7 +48,7 @@ int main(int argc, char *argv[], char *envp[]) {
     // check that enough args were passed
     // check that the running binary has the right permissions
     // i.e: suid is set and owned by root:root
-    ValidateBinary(GetPath(*argv, true));
+    //ValidateBinary(GetPath(*argv, true));
 
     // load the arguments into a vector, then add a null at the end,
     // to have an indication when the vector ends
