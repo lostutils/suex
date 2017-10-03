@@ -4,6 +4,12 @@
 #include <iostream>
 #include <regex>
 
+static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
+static auto bsd_re_ = std::regex(R"(^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(([a-z_][a-z0-9_-]*[$]?)|\*)\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
+static auto line_re_ = std::regex(R"(^(%?[1-9a-zA-Z]+)\s->\s([1-9a-zA-Z]+)(:([1-9A-Za-z]+))?\s+::\s+([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
+static auto comment_re_ = std::regex(R"(^[\t|\s]*#.*)");
+static auto empty_re_ = std::regex(R"(^[\t|\s]*)");
+
 class ExecutablePermissions {
  public:
   explicit ExecutablePermissions(User &user,
@@ -37,10 +43,7 @@ class Permissions {
 
  private:
   std::vector<ExecutablePermissions> perms_ = {};
-  std::regex line_re_ = std::regex(
-      R"(^(%?[1-9a-zA-Z]+)\s->\s([1-9a-zA-Z]+)(:([1-9A-Za-z]+))?\s+::\s+([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
-  std::regex comment_re_ = std::regex(R"(^[\t|\s]*#.*)");
-  std::regex empty_re_ = std::regex(R"(^[\t|\s]*)");
+
 
   // match ' or " but not \' and \"
   // if that looks weird, a full explanation in the cpp file

@@ -4,13 +4,17 @@
 #include <options.h>
 #include <version.h>
 #include <path.h>
+#include <env.h>
 
-int Do(const Permissions &permissions, const Options &opts) {
+int Do(const Permissions &permissions, const Options &opts, const Environment &env) {
+
+  char *const * cmdargv = opts.CommandArguments();
+
   // check in the configuration if the destination user can run the command with the requested permissions
-  std::string cmd_txt{CommandArgsText(opts.CommandArguments())};
+  std::string cmd_txt{CommandArgsText(cmdargv)};
 
   if (!BypassPermissions(opts.Me(), opts.AsUser(), opts.AsGroup()) &&
-      !HasPermissions(permissions, opts.AsUser(), opts.AsGroup(), opts.CommandArguments())) {
+      !HasPermissions(permissions, opts.AsUser(), opts.AsGroup(), cmdargv)) {
     std::stringstream ss;
     ss << "You can't execute '" << cmd_txt <<
        "' as '" << opts.AsUser().Name() << ":" << opts.AsGroup().Name()
@@ -25,13 +29,13 @@ int Do(const Permissions &permissions, const Options &opts) {
   SetPermissions(opts.AsUser(), opts.AsGroup());
 
   // execute with uid and gid. path lookup is done internally, so execvp is not needed.
-  execvp(opts.CommandArguments()[0], &opts.CommandArguments()[0]);
+  execvpe(cmdargv[0], &cmdargv[0], env.Raw());
 
   // will not get here unless execvp failed
   throw std::runtime_error(cmd_txt + " : " + std::strerror(errno));
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[], char* envp[]) {
   try {
     // check that enough args were passed
     if (argc < 2) {
@@ -52,7 +56,10 @@ int main(int argc, char *argv[]) {
     // load the configuration from the default path
     Permissions permissions{opts.ConfigurationPath()};
 
-    return Do(permissions, opts);
+    // load all the environment variables
+    Environment env { envp};
+
+    return Do(permissions, opts, env);
 
   } catch (std::exception &e) {
     logger::error << e.what() << std::endl;
