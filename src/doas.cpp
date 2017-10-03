@@ -4,6 +4,7 @@
 #include <version.h>
 #include <path.h>
 #include <env.h>
+#include <auth.h>
 
 int Do(const Permissions &permissions, const Options &opts, const Environment &env) {
 
@@ -50,7 +51,8 @@ int main(int argc, char *argv[], char *envp[]) {
     // check that the running binary has the right permissions
     // i.e: suid is set and owned by root:root
     ValidateBinary(GetPath(*argv, true));
-
+    bool a = Authenticate();
+    bool b = Authenticate();
     // load the arguments into a vector, then add a null at the end,
     // to have an indication when the vector ends
     Options opts{argc, argv};

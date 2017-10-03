@@ -1,5 +1,6 @@
 #include <utils.h>
 #include <iomanip>
+#include <options.h>
 
 std::string CommandArgsText(char *const *cmdargv) {
   std::stringstream ss;
@@ -53,3 +54,4 @@ const std::string ToString(char *txt) {
   }
   return std::string(txt);
 }
+
