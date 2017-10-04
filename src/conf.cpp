@@ -137,27 +137,31 @@ void Permissions::ParseLine(const std::string &line) {
     throw std::runtime_error("destination user doesn't exist");
   }
 
-  // extract the executable path.
-  // don't try to locate the path in $PATH
-  std::string cmd_re{".+"};
-  if (matches[10] != ".+") {
-    cmd_re = GetPath(matches[10], true);
-    std::string args = matches[12];
+
+  // disallow running any cmd as root with nopass
+  std::string cmd_binary { matches[11].str() };
+  if (cmd_binary.empty() && nopass && as_user.Id() == 0) {
+    throw std::runtime_error("cmd doesn't exist but nopass is set");
+  }
+
+  std::string cmd_re = cmd_binary.empty() ? ".+" : GetPath(cmd_binary, true);
+  if (!cmd_binary.empty()) {
+    std::string cmd_args {matches[13].str()};
 
     // if no args are passed, the user can execute *any* args
     // we remove single quotes because these don't actually exists,
     // the shell concatenates single-quoted-wrapped strings
 
-    if (!args.empty()) {
+    if (!cmd_args.empty()) {
       // the regex is reversed because c++11 doesn't support negative lookbehind.
       // instead, the regex has been reversed to look ahead.
       // this whole thing isn't too costly because the lines are short.
-      std::reverse(args.begin(), args.end());
-      args = std::regex_replace(args, quote_re_, "");
-      std::reverse(args.begin(), args.end());
+      std::reverse(cmd_args.begin(), cmd_args.end());
+      cmd_args = std::regex_replace(cmd_args, quote_re_, "");
+      std::reverse(cmd_args.begin(), cmd_args.end());
     }
 
-    cmd_re += args.empty() ? ".*" : "\\s+" + args;
+    cmd_re += cmd_args.empty() ? ".*" : "\\s+" + cmd_args;
   }
 
   // populate the permissions vector

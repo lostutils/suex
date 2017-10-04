@@ -7,7 +7,7 @@
 
 /* TODO:
  * 1. timestamp sha1
- *
+ * 2. non-mandatory cmd (but has to have password)
  */
 
 const ExecutablePermissions *Permit(const Permissions &permissions, const Options &opts) {
@@ -15,7 +15,7 @@ const ExecutablePermissions *Permit(const Permissions &permissions, const Option
   auto perm = permissions.Get(opts.AsUser(), cmdargv);
   if (perm == nullptr || perm->Deny()) {
     std::cerr << "You can't execute '" << CommandArgsText(cmdargv) <<
-              "' as " << opts.AsUser().Name();
+              "' as " << opts.AsUser().Name() << std::endl;
     return nullptr;
   }
 

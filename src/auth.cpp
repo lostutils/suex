@@ -12,12 +12,19 @@ std::string GetFilename() {
   return ss.str();
 }
 
-time_t SetTimestamp(const std::string &filename) {
-  time_t ts { std::time(nullptr)};
+void SetTimestamp(time_t ts, const std::string &filename) {
   std::ofstream f(filename);
   f << ts;
   f.close();
-  return ts;
+
+  // chmod 440
+  if (chmod(filename.c_str(), S_IRUSR | S_IRGRP) < 0) {
+    throw std::runtime_error(std::strerror(errno));
+  }
+  // chown root:root
+  if (chown(filename.c_str(), 0, 0) < 0) {
+    throw std::runtime_error(std::strerror(errno));
+  }
 }
 
 time_t GetTimestamp(const std::string &filename) {
@@ -41,13 +48,7 @@ time_t GetTimestamp(const std::string &filename) {
   }
 
   if (stat(filename.c_str(), &path_stat) != 0) {
-    std::ofstream f(filename);
-    f << 0;
-    f.close();
-
-    if (chown(filename.c_str(), 0, 0) < 0) {
-      throw std::runtime_error(std::strerror(errno));
-    }
+    SetTimestamp(0, filename);
     if (stat(filename.c_str(), &path_stat) != 0) {
       throw std::runtime_error(std::strerror(errno));
     }
@@ -56,6 +57,14 @@ time_t GetTimestamp(const std::string &filename) {
   if (!S_ISREG(path_stat.st_mode) ||
     path_stat.st_uid != 0 || path_stat.st_gid != 0) {
     throw std::runtime_error("wtf not a file");
+  }
+
+  // config file can only have read permissions for user and group
+  int permbits { PermissionBits(path_stat)};
+  if (permbits != 440) {
+    std::stringstream ss;
+    ss << "invalid permission bits: " << permbits;
+    throw std::runtime_error(ss.str());
   }
 
   std::ifstream f(filename);
@@ -111,7 +120,7 @@ bool Authenticate(const std::string &service_name, bool cache) {
   }
 
   if (cache) {
-    SetTimestamp(ts_filename);
+    SetTimestamp(time(nullptr), ts_filename);
   }
   return true;
 }

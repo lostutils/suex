@@ -8,7 +8,7 @@
 static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
 //^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(((:)?[a-z_][a-z0-9_-]*[$]?)(:([a-z_][a-z0-9_-]*[$]?))?|\*)\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?$
 static auto bsd_re_ = std::regex(
-    R"(^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(((:)?[a-z_][a-z0-9_-]*[$]?)(:([a-z_][a-z0-9_-]*[$]?))?|\*)\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
+    R"(^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(((:)?[a-z_][a-z0-9_-]*[$]?)(:([a-z_][a-z0-9_-]*[$]?))?|\*)(\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?)?$)");
 static auto line_re_ =
     std::regex(R"(^(%?[1-9a-zA-Z]+)\s->\s([1-9a-zA-Z]+)(:([1-9A-Za-z]+))?\s+::\s+([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
 static auto comment_re_ = std::regex(R"(^[\t|\s]*#.*)");
