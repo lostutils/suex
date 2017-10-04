@@ -5,6 +5,11 @@
 #include <env.h>
 #include <auth.h>
 
+/* TODO:
+ * 1. timestamp sha1
+ *
+ */
+
 const ExecutablePermissions *Permit(const Permissions &permissions, const Options &opts) {
   char *const *cmdargv{opts.CommandArguments()};
   auto perm = permissions.Get(opts.AsUser(), cmdargv);
@@ -15,7 +20,7 @@ const ExecutablePermissions *Permit(const Permissions &permissions, const Option
   }
 
   if (perm->PromptForPassword()) {
-    if (Authenticate(opts.AuthenticationService(), perm->CacheAuth())) {
+    if (!Authenticate(opts.AuthenticationService(), perm->CacheAuth())) {
       std::cerr << "Incorrect password" << std::endl;
       return nullptr;
     }
