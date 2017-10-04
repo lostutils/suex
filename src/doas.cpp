@@ -7,7 +7,11 @@
 
 /* TODO:
  * 1. timestamp sha1
- * 2. non-mandatory cmd (but has to have password)
+ * 2. fix verbose mode
+ * 2. sha1
+ * 3. extend token
+ * 4. write readme
+ *
  */
 
 const ExecutablePermissions *Permit(const Permissions &permissions, const Options &opts) {
@@ -80,7 +84,6 @@ int main(int argc, char *argv[], char *envp[]) {
 
     // load all the environment variables
     Environment env{envp};
-
     return Do(permissions, opts, env);
 
   } catch (std::exception &e) {

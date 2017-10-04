@@ -6,6 +6,7 @@
 
 #define LOG_PATH "/var/log/doas.log"
 
+
 namespace logger {
 
 enum Type {

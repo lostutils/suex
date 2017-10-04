@@ -59,8 +59,8 @@ Permissions::Permissions(const std::string &path) {
   // parse each line in the configuration file
   std::ifstream f(path);
   std::string line;
-  while (std::getline(f, line)) {
-    Parse(line);
+  for (int lineno = 1; std::getline(f, line); lineno++ ) {
+    Parse(lineno, line);
   }
 
   // TODO: RAII
@@ -88,9 +88,6 @@ std::vector<User> &AddUsers(const std::string &user, std::vector<User> &users) {
 }
 
 void Permissions::ParseLine(const std::string &line) {
-
-  logger::debug << "parsing: " << line << std::endl;
-
   std::smatch matches;
   if (!std::regex_search(line, matches, bsd_re_)) {
     logger::debug << "couldn't parse: " << line << std::endl;
@@ -101,24 +98,25 @@ void Permissions::ParseLine(const std::string &line) {
   std::vector<User> users;
 
   std::smatch opt_matches;
-  const std::string m{matches[3].str()};
   bool deny = matches[1] == "deny";
 
   bool nopass{false};
   bool keepenv{false};
   bool persist{false};
 
-  if (std::regex_search(m, opt_matches, opt_re_)) {
-    for (const auto &opt_match : opt_matches) {
-      if (opt_match == "nopass") {
-        nopass = true;
-      }
-      if (opt_match == "keepenv") {
-        keepenv = true;
-      }
-      if (opt_match == "persist") {
-        persist = true;
-      }
+  const std::string opts{matches[3].str()};
+  for (auto it = opts.cbegin(); std::regex_search(it, opts.cend(), opt_matches, opt_re_);
+       it += opt_matches.position() + opt_matches.length()) {
+
+    std::string opt_match{opt_matches.str()};
+    if (opt_match == "nopass") {
+      nopass = true;
+    }
+    if (opt_match == "keepenv") {
+      keepenv = true;
+    }
+    if (opt_match == "persist") {
+      persist = true;
     }
   }
 
@@ -139,61 +137,61 @@ void Permissions::ParseLine(const std::string &line) {
 
 
   // disallow running any cmd as root with nopass
-  std::string cmd_binary { matches[11].str() };
+  std::string cmd_binary{matches[8].str()};
   if (cmd_binary.empty() && nopass && as_user.Id() == 0) {
     throw std::runtime_error("cmd doesn't exist but nopass is set");
   }
 
   std::string cmd_re = cmd_binary.empty() ? ".+" : GetPath(cmd_binary, true);
-  if (!cmd_binary.empty()) {
-    std::string cmd_args {matches[13].str()};
 
-    // if no args are passed, the user can execute *any* args
-    // we remove single quotes because these don't actually exists,
-    // the shell concatenates single-quoted-wrapped strings
+  // parse the args
+  std::string cmd_args{matches[10].str()};
+  if (!cmd_args.empty()) {
+    // the regex is reversed because c++11 doesn't support negative lookbehind.
+    // instead, the regex has been reversed to look ahead.
+    // this whole thing isn't too costly because the lines are short.
+    std::reverse(cmd_args.begin(), cmd_args.end());
+    cmd_args = std::regex_replace(cmd_args, quote_re_, "");
+    std::reverse(cmd_args.begin(), cmd_args.end());
 
-    if (!cmd_args.empty()) {
-      // the regex is reversed because c++11 doesn't support negative lookbehind.
-      // instead, the regex has been reversed to look ahead.
-      // this whole thing isn't too costly because the lines are short.
-      std::reverse(cmd_args.begin(), cmd_args.end());
-      cmd_args = std::regex_replace(cmd_args, quote_re_, "");
-      std::reverse(cmd_args.begin(), cmd_args.end());
-    }
-
-    cmd_re += cmd_args.empty() ? ".*" : "\\s+" + cmd_args;
+    cmd_re += "\\s+" + cmd_args;
   }
 
   // populate the permissions vector
   for (User &user : users) {
-    perms_.emplace_back(ExecutablePermissions(user,
-                                              as_user,
-                                              deny,
-                                              keepenv,
-                                              nopass,
-                                              persist,
-                                              cmd_re,
-                                              line));
+    auto perm = ExecutablePermissions(user,
+                                      as_user,
+                                      deny,
+                                      keepenv,
+                                      nopass,
+                                      persist,
+                                      cmd_re);
+    perms_.emplace_back(perm);
+    logger::debug << "perm added: " << perm.ToString() << std::endl;
   }
 }
 
-void Permissions::Parse(const std::string &line) {
+void Permissions::Parse(int lineno, const std::string &line) {
+  logger::debug << "parsing line " << lineno << ": '" << line << "'" << std::endl;
 
   std::smatch matches;
   //  a comment, no need to parse
   if (std::regex_match(line, matches, comment_re_)) {
+    logger::debug << "line " << lineno << " is a comment, skipping." << std::endl;
     return;
   }
 
   //  an empty line, no need to parse
   if (std::regex_match(line, matches, empty_re_)) {
+    logger::debug << "line " << lineno << " is empty, skipping." << std::endl;
     return;
   }
 
   try {
     ParseLine(line);
+    logger::debug << "line " << lineno << " parsed successfully" << std::endl;
   } catch (std::exception &e) {
-    logger::error << "config error, skipping - " << e.what() << " [" << line << "]" << std::endl;
+    logger::error << "skipping line " << lineno << ": " << e.what() << std::endl;
   }
 }
 const ExecutablePermissions *Permissions::Get(const User &user, char *const *cmdargv) const {
@@ -219,6 +217,16 @@ bool ExecutablePermissions::CanExecute(const User &user, const std::string &cmd)
 
   std::smatch matches;
   bool matched{std::regex_match(cmd, matches, cmd_re_)};
-  logger::debug << (matched ? "Y" : "N") << " " << raw_txt_ << " ~= " << cmd << std::endl;
+  logger::debug << (matched ? "Y" : "N") << " " << cmd_re_txt_ << " ~= " << cmd << std::endl;
   return matched;
+}
+std::string ExecutablePermissions::ToString() const {
+  std::stringstream ss;
+  ss << "user: " << user_.Name() << " | " <<
+     "as-user: " << as_user_.Name() << " | " <<
+     "deny: " << deny_ << " | " <<
+     "nopass: " << nopass_ << " | " <<
+     "keepenv: " << keepenv_ << " | " <<
+     "cmd-regex: " << cmd_re_txt_;
+  return ss.str();
 }

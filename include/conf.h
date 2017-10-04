@@ -8,7 +8,7 @@
 static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
 //^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(((:)?[a-z_][a-z0-9_-]*[$]?)(:([a-z_][a-z0-9_-]*[$]?))?|\*)\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?$
 static auto bsd_re_ = std::regex(
-    R"(^(permit|deny)\s((.*)\s)?([a-z_][a-z0-9_-]*[$]?)\sas\s(((:)?[a-z_][a-z0-9_-]*[$]?)(:([a-z_][a-z0-9_-]*[$]?))?|\*)(\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?)?$)");
+    R"(^(permit|deny)\s((.*)\s)?((:)?[a-z_][a-z0-9_-]*[$]?)\sas\s([a-z_][a-z0-9_-]*[$]?)(\scmd\s([^\s]+)(\s([^\s].*[^\s])[\s]*)?)?$)");
 static auto line_re_ =
     std::regex(R"(^(%?[1-9a-zA-Z]+)\s->\s([1-9a-zA-Z]+)(:([1-9A-Za-z]+))?\s+::\s+([^\s]+)(\s([^\s].*[^\s])[\s]*)?$)");
 static auto comment_re_ = std::regex(R"(^[\t|\s]*#.*)");
@@ -22,16 +22,15 @@ class ExecutablePermissions {
                                  bool keepenv,
                                  bool nopass,
                                  bool persist,
-                                 const std::string &cmd_re,
-                                 const std::string &raw_txt) :
+                                 const std::string &cmd_re):
       user_{user},
       as_user_{as_user},
       deny_{deny},
       nopass_{nopass},
       keepenv_{keepenv},
       persist_{persist},
-      cmd_re_{cmd_re},
-      raw_txt_{raw_txt} {}
+      cmd_re_txt_{cmd_re},
+      cmd_re_{cmd_re} {}
 
   const User &Me() const { return user_; };
 
@@ -47,7 +46,8 @@ class ExecutablePermissions {
 
   bool CanExecute(const User &user, const std::string &cmd) const;
 
-  const std::string &ToString()  const { return raw_txt_;};
+  const std::string &Command()  const { return cmd_re_txt_;};
+  std::string ToString() const;
 
  private:
 
@@ -58,7 +58,7 @@ class ExecutablePermissions {
   bool persist_;
   User as_user_;
   std::regex cmd_re_;
-  std::string raw_txt_;
+  std::string cmd_re_txt_;
 };
 
 class Permissions {
@@ -83,7 +83,7 @@ class Permissions {
 
   void ValidatePermissions(const std::string &path) const;
 
-  void Parse(const std::string &line);
+  void Parse(int lineno, const std::string &line);
 };
 
 

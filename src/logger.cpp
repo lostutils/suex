@@ -1,11 +1,10 @@
 #include <logger.h>
 #include <utils.h>
 
-const bool DebugMode() {
-  auto env = ToString(std::getenv("DOAS_DEBUG"));
-  std::transform(env.begin(), env.end(), env.begin(), ::tolower);
-  return env == "true" || env == "1";
-};
+
+bool VerboseMode() {
+  return true;
+}
 
 const std::string TypeName(logger::Type type) {
   switch (type) {
@@ -31,28 +30,18 @@ logger::Logger::~Logger() {
 }
 
 std::ostream &logger::Logger::operator<<(const char *text) {
-  // don't log debug messages when the 'DOAS_DEBUG' flag is not set.
-  if (!DebugMode() && type_ == logger::DEBUG) {
-    return fs_;
-  }
-
   std::string str{text};
   *this << str;
 
-  if (type_ == logger::DEBUG) {
+  if (VerboseMode()) {
     return std::cerr;
   }
   return fs_;
 }
 
 std::ostream &logger::Logger::operator<<(const std::string &text) {
-  // don't log debug messages when the 'DOAS_DEBUG' flag is not set.
-  if (!DebugMode() && type_ == logger::DEBUG) {
-    return fs_;
-  }
-
-  if (type_ == logger::DEBUG) {
-    std::cerr << text;
+  if (VerboseMode()) {
+    std::cerr << name_ << " - " << text;
     return std::cerr;
   }
 

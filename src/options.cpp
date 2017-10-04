@@ -2,7 +2,7 @@
 #include <zconf.h>
 #include <path.h>
 #include <cstring>
-#include "options.h"
+#include <options.h>
 
 Options::Options(int argc, char *argv[]) {
   int idx = Parse(argc, argv);
