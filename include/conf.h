@@ -21,6 +21,7 @@ class ExecutablePermissions {
                                  bool deny,
                                  bool keepenv,
                                  bool nopass,
+                                 bool persist,
                                  const std::string &cmd_re,
                                  const std::string &raw_txt) :
       user_{user},
@@ -28,6 +29,7 @@ class ExecutablePermissions {
       deny_{deny},
       nopass_{nopass},
       keepenv_{keepenv},
+      persist_{persist},
       cmd_re_{cmd_re},
       raw_txt_{raw_txt} {}
 
@@ -37,11 +39,15 @@ class ExecutablePermissions {
 
   bool PromptForPassword() const { return !nopass_; };
 
+  bool CacheAuth() const { return !persist_; };
+
   bool KeepEnvironment() const { return keepenv_; };
 
   bool Deny() const { return deny_; };
 
   bool CanExecute(const User &user, const std::string &cmd) const;
+
+  const std::string &ToString()  const { return raw_txt_;};
 
  private:
 
@@ -49,6 +55,7 @@ class ExecutablePermissions {
   bool deny_;
   bool nopass_;
   bool keepenv_;
+  bool persist_;
   User as_user_;
   std::regex cmd_re_;
   std::string raw_txt_;

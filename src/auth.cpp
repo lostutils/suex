@@ -6,9 +6,9 @@
 #include <sstream>
 #include <ctime>
 
-std::string GetFilename(const std::string &txt) {
+std::string GetFilename() {
   std::stringstream ss;
-  ss << AUTH_CACHE_DIR << "/" << getsid(0) << "_" << std::hash<std::string>{}(txt);
+  ss << AUTH_CACHE_DIR << "/" << getsid(0) << "_" << std::hash<std::string>{}(running_user.Name());
   return ss.str();
 }
 
@@ -64,7 +64,16 @@ time_t GetTimestamp(const std::string &filename) {
   return ts;
 }
 
-bool Authenticate(const std::string &service_name) {
+bool Authenticate(const std::string &service_name, bool cache) {
+  std::string ts_filename { GetFilename()};
+  if (cache) {
+    time_t elapsed_secs = time(nullptr) - GetTimestamp(ts_filename);
+    if (elapsed_secs < 60 * 15) {
+      return true;
+    }
+    remove(ts_filename.c_str());
+  }
+
   const struct pam_conv pam_conversation = {misc_conv, nullptr};
   pam_handle_t *handle = nullptr; // this gets set by pam_start
 
@@ -101,6 +110,8 @@ bool Authenticate(const std::string &service_name) {
     return false;
   }
 
-  SetTimestamp();
+  if (cache) {
+    SetTimestamp(ts_filename);
+  }
   return true;
 }

@@ -23,13 +23,17 @@ int Options::Parse(int argc, char **argv) {
   }
 
   while (true) {
-    c = getopt(app_argc + 1, argv, "u:C:Lns");
+    c = getopt(app_argc + 1, argv, "u:a:C:Lns");
 
     /* Detect the end of the options. */
     if (c == -1)
       break;
 
     switch (c) {
+      case 'a': {
+         pam_service_name_ = optarg;
+        break;
+      }
       case 'u': {
         ParsePermissions(optarg);
         break;

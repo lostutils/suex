@@ -5,54 +5,50 @@
 #include <env.h>
 #include <auth.h>
 
-int Do(const Permissions &permissions, const Options &opts, const Environment &env) {
-
+const ExecutablePermissions *Permit(const Permissions &permissions, const Options &opts) {
   char *const *cmdargv{opts.CommandArguments()};
-  std::string cmd_txt{CommandArgsText(cmdargv)};
-  char *const *envp = env.Raw();
+  auto perm = permissions.Get(opts.AsUser(), cmdargv);
+  if (perm == nullptr || perm->Deny()) {
+    std::cerr << "You can't execute '" << CommandArgsText(cmdargv) <<
+              "' as " << opts.AsUser().Name();
+    return nullptr;
+  }
 
-  if (!BypassPermissions(opts.AsUser())) {
-    auto perm = permissions.Get(opts.AsUser(), cmdargv);
-    if (perm == nullptr || perm->Deny()) {
-      std::stringstream ss;
-      ss << "You can't execute '" << cmd_txt <<
-         "' as " << opts.AsUser().Name()
-         << ": " << std::strerror(EPERM);
-      throw std::runtime_error(ss.str());
-    }
-
-    if (perm->PromptForPassword()) {
-      bool authenticated = false;
-      int attempts{3};
-      for (int i = 0; i < attempts && !authenticated; ++i) {
-        authenticated = Authenticate("common-auth");
-        if (!authenticated) {
-          std::cerr << "Sorry, try again." << std::endl;
-        }
-      }
-      if (!authenticated) {
-        std::stringstream ss;
-        ss << attempts << " incorrect password attempts" << std::endl;
-        throw std::runtime_error(ss.str());
-
-      }
-
-      if (!perm->KeepEnvironment()) {
-        envp = {nullptr};
-      }
+  if (perm->PromptForPassword()) {
+    if (Authenticate(opts.AuthenticationService(), perm->CacheAuth())) {
+      std::cerr << "Incorrect password" << std::endl;
+      return nullptr;
     }
   }
+  return perm;
+}
+int DoAs(const User &user, char * const cmdargv[], char *const envp[]) {
   // update the HOME env according to the as_user dir
-  setenv("HOME", opts.AsUser().HomeDirectory().c_str(), 1);
+  setenv("HOME", user.HomeDirectory().c_str(), 1);
 
   // set permissions to requested id and gid
-  SetPermissions(opts.AsUser());
+  SetPermissions(user);
 
   // execute with uid and gid. path lookup is done internally, so execvp is not needed.
   execvpe(cmdargv[0], &cmdargv[0], envp);
 
   // will not get here unless execvp failed
-  throw std::runtime_error(cmd_txt + " : " + std::strerror(errno));
+  throw std::runtime_error(CommandArgsText(cmdargv) + " : " + std::strerror(errno));
+}
+
+int Do(const Permissions &permissions, const Options &opts, const Environment &env) {
+  char *const *envp = env.Raw();
+  if (!BypassPermissions(opts.AsUser())) {
+    auto perm = Permit(permissions, opts);
+    if (perm == nullptr) {
+      return 1;
+    }
+
+    if (!perm->KeepEnvironment()) {
+      envp = {nullptr};
+    }
+  }
+  return DoAs(opts.AsUser(), opts.CommandArguments(), envp);
 }
 
 int main(int argc, char *argv[], char *envp[]) {

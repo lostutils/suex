@@ -101,11 +101,12 @@ void Permissions::ParseLine(const std::string &line) {
   std::vector<User> users;
 
   std::smatch opt_matches;
-  const std::string m  { matches[3].str()};
+  const std::string m{matches[3].str()};
   bool deny = matches[1] == "deny";
 
-  bool nopass {false};
-  bool keepenv {false};
+  bool nopass{false};
+  bool keepenv{false};
+  bool persist{false};
 
   if (std::regex_search(m, opt_matches, opt_re_)) {
     for (const auto &opt_match : opt_matches) {
@@ -114,6 +115,9 @@ void Permissions::ParseLine(const std::string &line) {
       }
       if (opt_match == "keepenv") {
         keepenv = true;
+      }
+      if (opt_match == "persist") {
+        persist = true;
       }
     }
   }
@@ -135,7 +139,7 @@ void Permissions::ParseLine(const std::string &line) {
 
   // extract the executable path.
   // don't try to locate the path in $PATH
-  std::string cmd_re {".+"};
+  std::string cmd_re{".+"};
   if (matches[10] != ".+") {
     cmd_re = GetPath(matches[10], true);
     std::string args = matches[12];
@@ -158,7 +162,14 @@ void Permissions::ParseLine(const std::string &line) {
 
   // populate the permissions vector
   for (User &user : users) {
-    perms_.emplace_back(ExecutablePermissions(user, as_user, deny, nopass, keepenv, cmd_re, line));
+    perms_.emplace_back(ExecutablePermissions(user,
+                                              as_user,
+                                              deny,
+                                              keepenv,
+                                              nopass,
+                                              persist,
+                                              cmd_re,
+                                              line));
   }
 }
 
@@ -181,7 +192,7 @@ void Permissions::Parse(const std::string &line) {
     logger::error << "config error, skipping - " << e.what() << " [" << line << "]" << std::endl;
   }
 }
-const ExecutablePermissions *Permissions::Get(const User &user, char *const *cmdargv)const {
+const ExecutablePermissions *Permissions::Get(const User &user, char *const *cmdargv) const {
   std::string cmd = std::string(*cmdargv);
   std::string cmdtxt{CommandArgsText(cmdargv)};
   auto it = perms_.cbegin();
@@ -193,7 +204,7 @@ const ExecutablePermissions *Permissions::Get(const User &user, char *const *cmd
   return nullptr;
 }
 
-bool ExecutablePermissions::CanExecute(const User &user, const std::string &cmd)const {
+bool ExecutablePermissions::CanExecute(const User &user, const std::string &cmd) const {
   if (Me().Id() != getuid()) {
     return false;
   }
@@ -203,7 +214,7 @@ bool ExecutablePermissions::CanExecute(const User &user, const std::string &cmd)
   }
 
   std::smatch matches;
-  bool matched {std::regex_match(cmd, matches, cmd_re_)};
-  logger::debug <<  (matched ? "Y" : "N") << " " << raw_txt_ << " ~= " << cmd << std::endl;
+  bool matched{std::regex_match(cmd, matches, cmd_re_)};
+  logger::debug << (matched ? "Y" : "N") << " " << raw_txt_ << " ~= " << cmd << std::endl;
   return matched;
 }
