@@ -8,7 +8,9 @@
 *doas* is a utility that is aimed to replace *sudo* for most ordinary use cases.
 Ted Unagst's, an OpenBSD developer, explained why He originally wrote it in his blog post: [doas - dedicated openbsd application subexecutor](https://www.tedunangst.com/flak/post/doas).
 
-The gist is that `sudo` is hard to configure and does a lot more then the standard user needs. `doas` was created in order to replace `sudo` for regular folks like me and you.
+The gist is that `sudo` is hard to configure and does a lot more then the standard user needs.  
+
+`doas` was created in order to replace `sudo` for regular folks like me and you.
 
 ## Why Another Port?
 
