@@ -101,7 +101,8 @@ const std::vector<std::string> &GetExecutables(const std::string &glob_pattern, 
 
   if (retval != 0) {
     logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval << std::endl;
-    throw doas::IOError("no executables at %s", glob_pattern.c_str());
+    logger::warning() << "there are no executables at " << glob_pattern << std::endl;
+    return vec;
   }
 
   for (size_t i = 0; i < globbuf.gl_pathc; i++) {
@@ -251,7 +252,10 @@ Permissions::Permissions(const std::string &path, const std::string &auth_servic
     : path_{path}, auth_service_{auth_service} {
   if (path_ == PATH_CONFIG) {
     if (!path::Exists(path_)) {
-      path::Touch(path_);
+      std::fstream fs;
+      fs.open(path_, std::ios::out);
+      DEFER (fs.close());
+      fs << "# Welcome to doas!";
       Permissions::SecureFile(path_);
     }
 

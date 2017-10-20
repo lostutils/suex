@@ -8,7 +8,7 @@ in the **doas.conf** configuration file.
 
 rules have the following format:
 
-    **permit**|**deny** [*options*] *identity* [**as** *target*] [**cmd** *command* [**args** ...]]
+   **permit**|**deny** [*options*] *identity* [**as** *target*] [**cmd** *command* [**args** ...]]
 
 They consist of the following parts:
 

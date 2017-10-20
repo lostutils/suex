@@ -87,6 +87,9 @@ void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions
     if (!utils::AskQuestion(prompt)) {
       throw doas::PermissionError("doas.conf is being edited from another session");
     }
+    if (remove(PATH_EDIT_LOCK) != 0) {
+      throw doas::IOError("%s: %s", PATH_EDIT_LOCK, std::strerror(errno));
+    }
   }
 
   if (!auth::Authenticate(permissions.PamService(), true, true)) {
@@ -99,7 +102,6 @@ void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions
   std::string tmpconf{"/tmp/doas.tmp"};
   utils::path::Touch(tmpconf);
   Permissions::SecureFile(tmpconf);
-  utils::path::Copy(PATH_CONFIG, tmpconf);
 
   DEFER({
           if (remove(PATH_EDIT_LOCK) != 0) {
@@ -111,6 +113,8 @@ void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions
             throw doas::IOError("%s: %s", tmpconf.c_str(), std::strerror(errno));
           }
         });
+
+  utils::path::Copy(PATH_CONFIG, tmpconf);
 
   std::vector<char *> cmdargv{
       strdup(utils::GetEditor().c_str()),

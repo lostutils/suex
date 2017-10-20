@@ -103,7 +103,7 @@ int Do(Permissions &permissions, const OptArgs &opts) {
   // up to here, we don't check if the file is valid
   // because the edit config command can edit invalid files
   if (!permissions.Size() > 0) {
-    throw doas::PermissionError("doas.conf is either invalid");
+    throw doas::PermissionError("doas.conf is either invalid or empty.\n! notice that you're not a member of 'wheel'");
   }
 
   if (opts.ShowPermissions()) {
