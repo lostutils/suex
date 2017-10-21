@@ -65,7 +65,7 @@ $ mkdir -p doas/build && cd doas/build && cmake .. && cd ..
 
 ## Project Status
 
-Version `0.2.0` is out and has complete feature parity with the original `doas`.
+Version `0.2.1` is out and has complete feature parity with the original `doas`.
 
 ## Authors
 
