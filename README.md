@@ -49,7 +49,7 @@ You can find pre-compiled `.deb` and `.rpm` packages in the [releases page](http
 
 ```bash
 $ git clone https://github.com/odedlaz/doas.git
-$ sudo dnf install -y cmake pam-devel elfutils-devel
+$ sudo dnf install -y cmake pam-devel elfutils-devel rubygem-ronn gcc-c++
 $ mkdir -p doas/build && cd doas/build && cmake .. && cd ..
 ```
 
@@ -57,7 +57,7 @@ $ mkdir -p doas/build && cd doas/build && cmake .. && cd ..
 
 ```bash
 $ git clone https://github.com/odedlaz/doas.git
-$ sudo apt install -y cmake libpam-dev libdw-dev  
+$ sudo apt install -y cmake libpam-dev libdw-dev ruby-ronn g++ rpm
 $ mkdir -p doas/build && cd doas/build && cmake .. && cd ..
 ```
 
