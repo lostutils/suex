@@ -13,12 +13,9 @@ class DoAsError : public std::runtime_error {
       runtime_error(utils::StringFormat(format, std::forward<Args>(args)...)) {}
 };
 
-class OptionError : public DoAsError {
+class InvalidUsage : public DoAsError {
  public:
-  explicit OptionError(const std::string &text) : DoAsError(text) {}
-  template<typename ... Args>
-  explicit OptionError(const std::string &format, Args &&... args) :
-      DoAsError(format, std::forward<Args>(args)...) {}
+  explicit InvalidUsage() : DoAsError("") {}
 };
 
 class PermissionError : public DoAsError {

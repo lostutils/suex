@@ -52,9 +52,9 @@ class Permissions {
 
   static bool IsFileSecure(const std::string &path);
 
-  const_iterator begin() const { return perms_.cbegin();};
+  const_iterator begin() const { return perms_.cbegin(); };
 
-  const_iterator end() const { return perms_.cend();};
+  const_iterator end() const { return perms_.cend(); };
 
 };
 

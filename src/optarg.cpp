@@ -14,37 +14,54 @@ using namespace doas::utils;
 using namespace doas::optargs;
 
 OptArgs::OptArgs(int argc, char *argv[]) {
-  int app_argc = ParseOpts(argc, argv);
-  if (app_argc == argc) {
+  int optind = ParseOpts(argc, argv);
+  if (optind == argc) {
     return;
   }
-  args_ = std::vector<char *> {argv + app_argc, argv + argc};
+  args_ = std::vector<char *> {argv + optind, argv + argc};
   // low level c code needs an indication when an array of pointers ends
   args_.emplace_back((char *) nullptr);
   binary_ = path::Locate(args_.front());
   args_.front() = (char *) binary_.c_str();
 }
 
-int OptArgs::ParseOpts(int argc, char **argv) {
-  int app_argc, c;
-
-  for (app_argc = 1; app_argc < argc; ++app_argc) {
-    if (argv[app_argc][0] != '-') {
-      break;
+int OptArgs::GetArgumentCount(int argc, char *argv[]) {
+  std::vector<std::string> param_opts{"-C", "-a", "-u"};
+  std::string prevopt, opt;
+  int i;
+  for (i = 1; i < argc; i++) {
+    prevopt = opt;
+    opt = argv[i];
+    if (opt.front() == '-') {
+      continue;
     }
+
+    if (std::find(param_opts.begin(),
+                  param_opts.end(),
+                  prevopt) != param_opts.end()) {
+      continue;
+    }
+
+    break;
   }
 
   // need to start from next index
-  if (app_argc != argc) {
-    app_argc++;
+  if (i != argc) {
+    return i + 1;
   }
+
+  return i;
+}
+int OptArgs::ParseOpts(int argc, char *argv[]) {
+  int c;
+  argc = GetArgumentCount(argc, argv);
   while (true) {
-    c = getopt(app_argc, argv, "u:a:C:LEVDvns");
+    c = getopt(argc, argv, "a:C:EVDvLnsu:");
+    if (c == -1) {
+      return optind;
+    }
     /* Detect the end of the options. */
     switch (c) {
-      case -1: {
-        return optind;
-      }
       case 'a': {
         pam_service_ = optarg;
         break;
@@ -98,7 +115,7 @@ int OptArgs::ParseOpts(int argc, char **argv) {
       }
       default: {
         // getopt will write the error, thus not need to do anything here
-        throw doas::DoAsError("");
+        throw doas::InvalidUsage();
       }
     }
   }

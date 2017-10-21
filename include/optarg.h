@@ -37,7 +37,10 @@ class OptArgs {
   const permissions::User &AsUser() const { return user_; }
 
  private:
-  int ParseOpts(int argc, char **argv);
+  int ParseOpts(int argc, char *argv[]);
+
+  int GetArgumentCount(int argc, char *argv[]);
+
   std::string pam_service_{DEFAULT_AUTH_SERVICE};
   std::vector<char *> args_{};
   std::string config_path_;

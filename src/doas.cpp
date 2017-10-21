@@ -148,11 +148,12 @@ int main(int argc, char *argv[]) {
 
     return Do(permissions, opts);
   }
+  catch (InvalidUsage &) {
+    ShowUsage();
+    return 1;
+  }
   catch (DoAsError &e) {
-    std::string what{e.what()};
-    if (!what.empty()) {
-      std::cerr << e.what() << std::endl;
-    }
+    std::cerr << e.what() << std::endl;
 
     return 1;
   }
