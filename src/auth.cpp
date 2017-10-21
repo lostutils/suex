@@ -14,14 +14,22 @@ struct auth_data {
   bool prompt;
 };
 
-std::string GetTokenName(const std::string &service_name) {
-  std::string token{service_name + "__" + running_user.Name()};
-  return std::to_string(std::hash<std::string>{}(token));
+std::string GetTokenPrefix(const std::string &service_name){
+  std::string text{service_name + "__" + running_user.Name()};
+  return std::to_string(std::hash<std::string>{}(text));
 }
 
-std::string GetFilepath(const std::string &service_name) {
+std::string GetTokenName(const std::string &service_name,
+                          const std::string &cache_token) {
+  std::string prefix { GetTokenPrefix(service_name)};
+  std::string suffix { std::to_string(std::hash<std::string>{}(cache_token)) };
+  return prefix + suffix;
+}
+
+std::string GetFilepath(const std::string &service_name,
+const std::string &cache_token) {
   std::stringstream ss;
-  ss << PATH_DOAS_TMP << "/" << GetTokenName(service_name) << getsid(0);
+  ss << PATH_DOAS_TMP << "/" << GetTokenName(service_name, cache_token) << getsid(0);
   return ss.str();
 }
 
@@ -84,7 +92,7 @@ int auth::ClearTokens(const std::string &service_name) {
   glob_t globbuf{};
   std::string glob_pattern{StringFormat("%s/%s*",
                                         PATH_DOAS_TMP,
-                                        GetTokenName(service_name).c_str())};
+                                        GetTokenPrefix(service_name).c_str())};
   int retval = glob(glob_pattern.c_str(), 0, nullptr, &globbuf);
   if (retval != 0) {
     logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval << std::endl;
@@ -111,10 +119,10 @@ bool auth::PolicyExists(const std::string &service_name) {
   return path::Exists(policy_path);
 }
 
-bool auth::Authenticate(const std::string &service_name, bool cache, bool prompt) {
+bool auth::Authenticate(const std::string &service_name, bool prompt, const std::string &cache_token) {
   logger::debug() << "Authenticating | " <<
                   "policy: " << service_name << " | "
-                      "cache: " << (cache ? "on" : "off") << " | "
+                      "cache: " << (cache_token.empty() ? "off" : "on") << " | "
                       "prompt: " << (prompt ? "on" : "off")
                   << std::endl;
 
@@ -123,9 +131,9 @@ bool auth::Authenticate(const std::string &service_name, bool cache, bool prompt
                           service_name.c_str());
   }
 
-  std::string ts_filename{GetFilepath(service_name)};
+  std::string ts_filename{GetFilepath(service_name, cache_token)};
 
-  if (cache) {
+  if (!cache_token.empty()) {
     // check timestamp validity
     time_t ts{GetToken(ts_filename)};
     time_t now{time(nullptr)};
@@ -185,7 +193,7 @@ bool auth::Authenticate(const std::string &service_name, bool cache, bool prompt
     return false;
   }
   // set the timestamp file
-  if (cache) {
+  if (!cache_token.empty()) {
     SetToken(time(nullptr), ts_filename);
   }
   return true;

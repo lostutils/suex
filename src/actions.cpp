@@ -33,7 +33,8 @@ const permissions::Entity *doas::Permit(const Permissions &perms, const OptArgs 
   }
 
   if (perm->PromptForPassword()) {
-    if (!auth::Authenticate(perms.PamService(), perm->CacheAuth(), opts.Interactive())) {
+    std::string cache_token { perm->CacheAuth() ? perm->Command() : ""};
+    if (!auth::Authenticate(perms.AuthService(), opts.Interactive(), cache_token)) {
       throw doas::PermissionError("Incorrect password");
     }
   }
@@ -65,7 +66,7 @@ void doas::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
 }
 
 void doas::ClearAuthTokens(const Permissions &permissions) {
-  int cleared = auth::ClearTokens(permissions.PamService());
+  int cleared = auth::ClearTokens(permissions.AuthService());
   if (cleared < 0) {
     throw std::runtime_error("error while clearing tokens");
   }
@@ -92,7 +93,7 @@ void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions
     }
   }
 
-  if (!auth::Authenticate(permissions.PamService(), true, true)) {
+  if (!auth::Authenticate(permissions.AuthService(), true)) {
     throw doas::PermissionError("Incorrect password");
   }
 

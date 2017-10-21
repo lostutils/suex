@@ -37,7 +37,7 @@ class Permissions {
 
   static bool Validate(const std::string &path, const std::string &auth_service);
 
-  std::string PamService() const { return auth_service_; }
+  std::string AuthService() const { return auth_service_; }
 
   bool Privileged() const { return wheel_group.Contains(running_user) || running_user == root_user; }
 
