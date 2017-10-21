@@ -83,6 +83,9 @@ void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions
     throw doas::PermissionError("Access denied. You are not allowed to edit the config file");
   }
 
+  // verbose is needed when editing
+  TurnOnVerboseOutput(permissions);
+
   if (utils::path::Exists(PATH_EDIT_LOCK)) {
     auto prompt = "doas.conf is already being edited from another session, do you want to continue anyway?";
     if (!utils::AskQuestion(prompt)) {
