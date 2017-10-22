@@ -32,8 +32,7 @@ class Permissions {
  public:
   typedef Collection::const_iterator const_iterator;
 
-  explicit Permissions(const std::string &path,
-                       const std::string &auth_service,
+  explicit Permissions(const std::string &path, const std::string &auth_service,
                        bool only_user = true);
 
   static bool Validate(const std::string &path,

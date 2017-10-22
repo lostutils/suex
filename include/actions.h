@@ -23,7 +23,6 @@ void CheckConfiguration(const optargs::OptArgs &opts);
 const permissions::Entity *Permit(const permissions::Permissions &permissions,
                                   const optargs::OptArgs &opts);
 
-void SwitchUserAndExecute(const permissions::User &user,
-                          char *const *cmdargv,
+void SwitchUserAndExecute(const permissions::User &user, char *const *cmdargv,
                           char *const *envp);
 }

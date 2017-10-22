@@ -173,7 +173,8 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
   // extract the destination user
   User as_user = User(matches[6]);
   if (!as_user.Exists()) {
-    throw suex::PermissionError("destination user doesn't exist");
+    throw suex::PermissionError("destination user '%s' doesn't exist",
+                                as_user.Name().c_str());
   }
 
   // disallow running any cmd as root with nopass
@@ -207,7 +208,8 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
       }
 
       if (!user.Exists()) {
-        throw suex::PermissionError("user doesn't exist");
+        throw suex::PermissionError("user '%s' doesn't exist",
+                                    user.Name().c_str());
       }
 
       perms_.emplace_back(permissions::Entity(user, as_user, deny, keepenv,

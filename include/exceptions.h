@@ -2,6 +2,8 @@
 #include <utils.h>
 #include <stdexcept>
 
+using suex::utils::StringFormat;
+
 namespace suex {
 
 class SuExError : public std::runtime_error {
@@ -10,8 +12,7 @@ class SuExError : public std::runtime_error {
 
   template <typename... Args>
   explicit SuExError(const std::string &format, Args &&... args)
-      : runtime_error(utils::StringFormat(format,
-                                          std::forward<Args>(args)...)) {}
+      : runtime_error(StringFormat(format, std::forward<Args>(args)...)) {}
 };
 
 class InvalidUsage : public SuExError {
