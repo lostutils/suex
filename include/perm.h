@@ -53,8 +53,8 @@ class User {
 class Group {
  private:
   typedef std::set<User> Collection;
-  int gid_{-1};
   std::string name_;
+  int gid_{-1};
   std::set<User> members_;
 
  public:
