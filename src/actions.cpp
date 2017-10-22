@@ -127,6 +127,10 @@ void suex::EditConfiguration(const OptArgs &opts,
 
   utils::path::Copy(PATH_CONFIG, tmpconf);
 
+  if (chmod(tmpconf.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0) {
+    throw suex::IOError("%s: %s", tmpconf.c_str(), std::strerror(errno));
+  }
+
   std::vector<char *> cmdargv{strdup(utils::GetEditor().c_str()),
                               strdup(tmpconf.c_str()), nullptr};
 
