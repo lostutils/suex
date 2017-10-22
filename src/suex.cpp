@@ -129,7 +129,8 @@ int Do(Permissions &permissions, const OptArgs &opts) {
 
   std::vector<char *> envs;
 
-  SwitchUserAndExecute(opts.AsUser(), opts.CommandArguments(), GetEnv(envs, permissions, opts));
+  SwitchUserAndExecute(opts.AsUser(), opts.CommandArguments(),
+                       GetEnv(envs, permissions, opts));
   return 0;
 }
 

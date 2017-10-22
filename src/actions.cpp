@@ -43,7 +43,8 @@ const permissions::Entity *suex::Permit(const Permissions &perms,
   return perm;
 }
 
-void suex::SwitchUserAndExecute(const User &user, char *const *cmdargv, char *const *envp) {
+void suex::SwitchUserAndExecute(const User &user, char *const *cmdargv,
+                                char *const *envp) {
   // update the HOME env according to the as_user dir
   setenv("HOME", user.HomeDirectory().c_str(), 1);
 
