@@ -83,7 +83,7 @@ User::User(uid_t uid) : uid_{-1} {
   shell_ = pw->pw_shell;
 }
 
-User::User(const std::string &user) : uid_{-1} {
+User::User(const std::string &user) : name_ {user}, uid_{-1} {
   // try to extract the password struct
   // if the user is empty, use the current user,
   // otherwise try to take the one that was passed.
@@ -143,7 +143,7 @@ Group::Group(gid_t gid) : gid_{-1} {
   }
 }
 
-Group::Group(const std::string &grp) : gid_{-1} {
+Group::Group(const std::string &grp) : name_{grp}, gid_{-1} {
   // try to extract the group struct
   // if the group is empty, and the user exists -> use the user's group,
   //
