@@ -1,6 +1,6 @@
 <h1 align="center">
   <a href="https://github.com/odedlaz/suex"><img src="https://oded.blog/images/2017/10/suex_xkcd.png" alt="suex" width="256" height="256"/></a><br>
-  <a href="https://github.com/odedlaz/suex">suex</a>
+  <a href="https://github.com/odedlaz/suex"><b>S</b>witch <b>U</b>ser <b>Ex</b>ecute</a>
 </h1>
 
 <h4 align="center">A complete re-implementation of OpenBSD's doas that's extremely more robust</h4>
@@ -67,7 +67,9 @@ $ mkdir -p suex/build && cd suex/build && cmake .. && cd ..
 
 ## Project Status
 
-Version `0.2.2` is out and has complete feature parity with the OpenBSD's `doas`.
+Version `0.2.2` is out and has complete feature parity with the OpenBSD's `doas`.  
+Note that some featues work a bit differently, read the docs to see changes.
+
 
 ## Authors
 
@@ -85,6 +87,7 @@ Once I feel this method is not effective anymore, I'll probably create a slack c
 
 ### Security checks
 
+#### Owenership & Permissions
 `doas` doesn't check the owners & permissions of the binary and configuration file.
 `sudo` checks those, but only warns the user.
 
@@ -93,6 +96,18 @@ It also ensures the binary has [setuid](https://en.wikipedia.org/wiki/Setuid), a
 
 Furthermore, only full paths of commands are allowed in the configuration file.  
 The idea is that privileged users (i.e: members of the *wheel* group) need to explicitly set the rule instead of depending on the running user's path.
+
+#### Rule Creation
+
+`doas` allows users to ommit the `as` and `cmd` keywords.  
+if `as` is not specified, `root` is used.
+if `cmd` is not specified, the command works on all binaries.
+if `args` is empty, the command doesn't match for processes with arguments.
+
+`suex` works a bit differently:
+- `as` and `cmd` are mandatory. You have to specify them.
+- `args` is not mandatory. if omitted, only the cmd matches.
+  if you want to match *any* args, use `args .*` instead.
 
 ### Edit mode
 
