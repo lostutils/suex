@@ -1,13 +1,13 @@
+#include <exceptions.h>
+#include <fcntl.h>
+#include <logger.h>
+#include <path.h>
+#include <sys/sendfile.h>
+#include <utils.h>
+#include <climits>
 #include <cstring>
 #include <fstream>
 #include <sstream>
-#include <path.h>
-#include <utils.h>
-#include <exceptions.h>
-#include <climits>
-#include <logger.h>
-#include <sys/sendfile.h>
-#include <fcntl.h>
 
 using namespace doas;
 using namespace doas::utils;
@@ -27,11 +27,9 @@ const std::string path::Locate(const std::string &path, bool searchInPath) {
     throw doas::IOError("path '%s' is empty", path.c_str());
   }
 
-  struct stat fstat{};
+  struct stat fstat {};
   std::string fullpath{Real(path)};
-  if (stat(fullpath.c_str(), &fstat) == 0 &&
-      S_ISREG(fstat.st_mode)) {
-
+  if (stat(fullpath.c_str(), &fstat) == 0 && S_ISREG(fstat.st_mode)) {
     return fullpath;
   }
 
@@ -41,8 +39,7 @@ const std::string path::Locate(const std::string &path, bool searchInPath) {
     std::string dir;
     while (getline(iss, dir, ':')) {
       fullpath = Real(StringFormat("%s/%s", dir.c_str(), name.c_str()));
-      if (stat(fullpath.c_str(), &fstat) == 0 &&
-          S_ISREG(fstat.st_mode)) {
+      if (stat(fullpath.c_str(), &fstat) == 0 && S_ISREG(fstat.st_mode)) {
         return fullpath;
       }
     }
@@ -63,20 +60,17 @@ void path::Copy(const std::string &source, const std::string &dest) {
   int dst_fd = open(dest.c_str(), O_WRONLY | O_CREAT, 0440);
   DEFER(close(dst_fd));
 
-  struct stat fstat{};
+  struct stat fstat {};
   if (stat(source.c_str(), &fstat) != 0) {
     throw doas::IOError("%s: %s", source.c_str(), std::strerror(errno));
   }
 
-  if (sendfile(dst_fd,
-               src_fd,
-               nullptr,
-               (size_t) fstat.st_size) <= 0) {
+  if (sendfile(dst_fd, src_fd, nullptr, (size_t)fstat.st_size) <= 0) {
     throw doas::IOError("%s: %s", source.c_str(), std::strerror(errno));
   }
 }
 void path::Move(const std::string &source, const std::string &dest) {
-  struct stat fstat{};
+  struct stat fstat {};
   if (stat(source.c_str(), &fstat) != 0) {
     throw doas::IOError("%s: %s", dest.c_str(), std::strerror(errno));
   }
@@ -94,9 +88,8 @@ void path::Move(const std::string &source, const std::string &dest) {
   }
 }
 void path::Touch(const std::string &pathname) {
-  if (open(pathname.c_str(),
-           O_WRONLY | O_CREAT | O_NOCTTY | O_NONBLOCK,
-           0666) < 0) {
+  if (open(pathname.c_str(), O_WRONLY | O_CREAT | O_NOCTTY | O_NONBLOCK, 0666) <
+      0) {
     throw doas::IOError("%s: %s", pathname.c_str(), std::strerror(errno));
   }
 
@@ -104,4 +97,3 @@ void path::Touch(const std::string &pathname) {
     throw doas::IOError("%s: %s", pathname.c_str(), std::strerror(errno));
   }
 }
-

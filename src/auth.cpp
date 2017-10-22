@@ -1,10 +1,10 @@
 #include <auth.h>
-#include <cstring>
-#include <logger.h>
-#include <glob.h>
-#include <optarg.h>
 #include <exceptions.h>
+#include <glob.h>
+#include <logger.h>
+#include <optarg.h>
 #include <security/pam_misc.h>
+#include <cstring>
 
 using namespace doas;
 using namespace doas::optargs;
@@ -14,22 +14,23 @@ struct auth_data {
   bool prompt;
 };
 
-std::string GetTokenPrefix(const std::string &service_name){
+std::string GetTokenPrefix(const std::string &service_name) {
   std::string text{service_name + "__" + running_user.Name()};
   return std::to_string(std::hash<std::string>{}(text));
 }
 
 std::string GetTokenName(const std::string &service_name,
-                          const std::string &cache_token) {
-  std::string prefix { GetTokenPrefix(service_name)};
-  std::string suffix { std::to_string(std::hash<std::string>{}(cache_token)) };
+                         const std::string &cache_token) {
+  std::string prefix{GetTokenPrefix(service_name)};
+  std::string suffix{std::to_string(std::hash<std::string>{}(cache_token))};
   return prefix + suffix;
 }
 
 std::string GetFilepath(const std::string &service_name,
-const std::string &cache_token) {
+                        const std::string &cache_token) {
   std::stringstream ss;
-  ss << PATH_DOAS_TMP << "/" << GetTokenName(service_name, cache_token) << getsid(0);
+  ss << PATH_DOAS_TMP << "/" << GetTokenName(service_name, cache_token)
+     << getsid(0);
   return ss.str();
 }
 
@@ -49,7 +50,7 @@ void SetToken(time_t ts, const std::string &filename) {
 }
 
 time_t GetToken(const std::string &filename) {
-  struct stat fstat{};
+  struct stat fstat {};
 
   if (stat(filename.c_str(), &fstat) != 0) {
     SetToken(0, filename);
@@ -62,8 +63,8 @@ time_t GetToken(const std::string &filename) {
     throw doas::IOError("auth timestamp is not a file");
   }
 
-  if (fstat.st_uid != 0 || fstat.st_gid != 0
-      || utils::PermissionBits(fstat) != 440) {
+  if (fstat.st_uid != 0 || fstat.st_gid != 0 ||
+      utils::PermissionBits(fstat) != 440) {
     throw doas::PermissionError("auth timestamp file has invalid permissions");
   }
 
@@ -74,13 +75,15 @@ time_t GetToken(const std::string &filename) {
   return ts;
 }
 
-int PamConversation(int, const struct pam_message **, struct pam_response **resp, void *appdata) {
-  auto auth_data = *(struct auth_data *) appdata;
+int PamConversation(int, const struct pam_message **,
+                    struct pam_response **resp, void *appdata) {
+  auto auth_data = *(struct auth_data *)appdata;
   if (!auth_data.prompt) {
     return PAM_AUTH_ERR;
   }
 
-  std::string prompt{utils::StringFormat("[doas] password for %s: ", running_user.Name().c_str())};
+  std::string prompt{utils::StringFormat("[doas] password for %s: ",
+                                         running_user.Name().c_str())};
   auth_data.pam_resp->resp = getpass(prompt.c_str());
   auth_data.pam_resp->resp_retcode = 0;
   *resp = auth_data.pam_resp;
@@ -88,14 +91,13 @@ int PamConversation(int, const struct pam_message **, struct pam_response **resp
 }
 
 int auth::ClearTokens(const std::string &service_name) {
-
   glob_t globbuf{};
-  std::string glob_pattern{StringFormat("%s/%s*",
-                                        PATH_DOAS_TMP,
+  std::string glob_pattern{StringFormat("%s/%s*", PATH_DOAS_TMP,
                                         GetTokenPrefix(service_name).c_str())};
   int retval = glob(glob_pattern.c_str(), 0, nullptr, &globbuf);
   if (retval != 0) {
-    logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval << std::endl;
+    logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval
+                    << std::endl;
     return 0;
   }
 
@@ -105,7 +107,8 @@ int auth::ClearTokens(const std::string &service_name) {
     logger::debug() << "clearing: " << token_path << std::endl;
     retval = remove(token_path.c_str());
     if (retval != 0) {
-      logger::debug() << "remove(\"" << token_path << "\") returned " << retval << std::endl;
+      logger::debug() << "remove(\"" << token_path << "\") returned " << retval
+                      << std::endl;
       return -1;
     }
   }
@@ -114,17 +117,19 @@ int auth::ClearTokens(const std::string &service_name) {
 }
 
 bool auth::PolicyExists(const std::string &service_name) {
-  std::string policy_path{StringFormat("%s/%s", PATH_PAM_POlICY,
-                                       service_name.c_str())};
+  std::string policy_path{
+      StringFormat("%s/%s", PATH_PAM_POlICY, service_name.c_str())};
   return path::Exists(policy_path);
 }
 
-bool auth::Authenticate(const std::string &service_name, bool prompt, const std::string &cache_token) {
-  logger::debug() << "Authenticating | " <<
-                  "policy: " << service_name << " | "
-                      "cache: " << (cache_token.empty() ? "off" : "on") << " | "
-                      "prompt: " << (prompt ? "on" : "off")
-                  << std::endl;
+bool auth::Authenticate(const std::string &service_name, bool prompt,
+                        const std::string &cache_token) {
+  logger::debug() << "Authenticating | "
+                  << "policy: " << service_name << " | "
+                                                   "cache: "
+                  << (cache_token.empty() ? "off" : "on") << " | "
+                                                             "prompt: "
+                  << (prompt ? "on" : "off") << std::endl;
 
   if (!PolicyExists(service_name)) {
     throw doas::AuthError("Invalid PAM policy: policy '%s' doesn't exist",
@@ -150,18 +155,13 @@ bool auth::Authenticate(const std::string &service_name, bool prompt, const std:
     }
   }
 
-  auth_data data{
-      .pam_resp = new (struct pam_response),
-      .prompt = prompt
-  };
+  auth_data data{.pam_resp = new (struct pam_response), .prompt = prompt};
 
   const struct pam_conv pam_conversation = {PamConversation, &data};
-  pam_handle_t *handle = nullptr; // this gets set by pam_start
+  pam_handle_t *handle = nullptr;  // this gets set by pam_start
 
-  int retval = pam_start(service_name.c_str(),
-                         running_user.Name().c_str(),
-                         &pam_conversation,
-                         &handle);
+  int retval = pam_start(service_name.c_str(), running_user.Name().c_str(),
+                         &pam_conversation, &handle);
 
   if (retval != PAM_SUCCESS) {
     logger::debug() << "[pam]: pam_start returned: " << retval << std::endl;
@@ -169,15 +169,16 @@ bool auth::Authenticate(const std::string &service_name, bool prompt, const std:
   }
 
   DEFER({
-          retval = pam_end(handle, retval);
-          if (retval != PAM_SUCCESS) {
-            logger::debug() << "[pam]: pam_end returned " << retval << std::endl;
-          }
-        });
+    retval = pam_end(handle, retval);
+    if (retval != PAM_SUCCESS) {
+      logger::debug() << "[pam]: pam_end returned " << retval << std::endl;
+    }
+  });
 
   retval = pam_authenticate(handle, 0);
   if (retval != PAM_SUCCESS) {
-    logger::debug() << "[pam]: pam_authenticate returned " << retval << std::endl;
+    logger::debug() << "[pam]: pam_authenticate returned " << retval
+                    << std::endl;
     return false;
   }
 
@@ -189,7 +190,8 @@ bool auth::Authenticate(const std::string &service_name, bool prompt, const std:
 
   retval = pam_close_session(handle, 0);
   if (retval != PAM_SUCCESS) {
-    logger::debug() << "[pam]: pam_close_session returned " << retval << std::endl;
+    logger::debug() << "[pam]: pam_close_session returned " << retval
+                    << std::endl;
     return false;
   }
   // set the timestamp file

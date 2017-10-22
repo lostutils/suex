@@ -1,10 +1,10 @@
 #pragma once
 
-#include <regex>
-#include <string>
+#include <optarg.h>
 #include <perm.h>
 #include <utils.h>
-#include <optarg.h>
+#include <regex>
+#include <string>
 
 namespace doas::permissions {
 
@@ -24,27 +24,30 @@ static auto quote_re_ = std::regex(R"(('|")(?!\\))");
 class Permissions {
  private:
   typedef std::vector<Entity> Collection;
-  std::vector<Entity> perms_{};
-  std::string auth_service_;
   std::string path_;
+  std::string auth_service_;
+  std::vector<Entity> perms_{};
   void Parse(int lineno, const std::string &line, bool only_user);
 
  public:
-
   typedef Collection::const_iterator const_iterator;
 
-  explicit Permissions(const std::string &path, const std::string &auth_service, bool only_user = true);
+  explicit Permissions(const std::string &path,
+                       const std::string &auth_service,
+                       bool only_user = true);
 
-  static bool Validate(const std::string &path, const std::string &auth_service);
+  static bool Validate(const std::string &path,
+                       const std::string &auth_service);
 
   std::string AuthService() const { return auth_service_; }
 
-  bool Privileged() const { return wheel_group.Contains(running_user) || running_user == root_user; }
+  bool Privileged() const {
+    return wheel_group.Contains(running_user) || running_user == root_user;
+  }
 
   void Reload(bool only_user);
 
-  const Entity *Get(const User &user,
-                    char *const *cmdargv) const;
+  const Entity *Get(const User &user, char *const *cmdargv) const;
 
   unsigned long Size() const { return perms_.size(); };
 
@@ -55,7 +58,5 @@ class Permissions {
   const_iterator begin() const { return perms_.cbegin(); };
 
   const_iterator end() const { return perms_.cend(); };
-
 };
-
 }

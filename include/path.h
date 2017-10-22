@@ -17,4 +17,3 @@ void Move(const std::string &source, const std::string &dest);
 
 void Touch(const std::string &path);
 }
-

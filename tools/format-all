@@ -1,0 +1,6 @@
+#!/usr/bin/env fish
+cd $ROOTDIR
+
+for f in $ROOTDIR/{src,include}/*.{h,cpp,hpp}
+   clang-format -i $f
+end

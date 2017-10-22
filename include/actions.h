@@ -1,9 +1,9 @@
 
 #pragma once
 
+#include <conf.h>
 #include <env.h>
 #include <optarg.h>
-#include <conf.h>
 
 namespace doas {
 
@@ -23,5 +23,7 @@ void CheckConfiguration(const optargs::OptArgs &opts);
 const permissions::Entity *Permit(const permissions::Permissions &permissions,
                                   const optargs::OptArgs &opts);
 
-void DoAs(const permissions::User &user, char *const cmdargv[], char *const envp[]);
+void DoAs(const permissions::User &user,
+          char *const cmdargv[],
+          char *const envp[]);
 }

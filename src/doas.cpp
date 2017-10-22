@@ -11,13 +11,13 @@ using namespace doas::env;
 using namespace doas::permissions;
 
 void ShowUsage() {
-  std::cout
-      << "usage: doas [-LEVDvns] [-a style] [-C config] [-u user] command [args]"
-      << std::endl;
+  std::cout << "usage: doas [-LEVDvns] [-a style] [-C config] [-u user] "
+               "command [args]"
+            << std::endl;
 }
 
 void CreateRunDirectory() {
-  struct stat fstat{};
+  struct stat fstat {};
   if (stat(PATH_VAR_RUN, &fstat) != 0) {
     throw doas::IOError(std::strerror(errno));
   }
@@ -42,7 +42,8 @@ void CreateRunDirectory() {
   }
 }
 
-char *const *GetEnv(std::vector<char *> &vec, const Permissions &permissions, const OptArgs &opts) {
+char *const *GetEnv(std::vector<char *> &vec, const Permissions &permissions,
+                    const OptArgs &opts) {
   char *const *envp = env::Raw();
   if (utils::BypassPermissions(opts.AsUser())) {
     return envp;
@@ -51,15 +52,9 @@ char *const *GetEnv(std::vector<char *> &vec, const Permissions &permissions, co
   auto perm = Permit(permissions, opts);
   if (!perm->KeepEnvironment()) {
     envp = new char *[9]{
-        env::GetRaw("DISPLAY"),
-        env::GetRaw("HOME"),
-        env::GetRaw("LOGNAME"),
-        env::GetRaw("MAIL"),
-        env::GetRaw("PATH"),
-        env::GetRaw("TERM"),
-        env::GetRaw("USER"),
-        env::GetRaw("USERNAME"),
-        nullptr};
+        env::GetRaw("DISPLAY"), env::GetRaw("HOME"),     env::GetRaw("LOGNAME"),
+        env::GetRaw("MAIL"),    env::GetRaw("PATH"),     env::GetRaw("TERM"),
+        env::GetRaw("USER"),    env::GetRaw("USERNAME"), nullptr};
   }
 
   if (!perm->EnvironmentVariablesConfigured()) {
@@ -90,7 +85,6 @@ char *const *GetEnv(std::vector<char *> &vec, const Permissions &permissions, co
 }
 
 int Do(Permissions &permissions, const OptArgs &opts) {
-
   if (opts.VerboseMode()) {
     TurnOnVerboseOutput(permissions);
   }
@@ -102,8 +96,10 @@ int Do(Permissions &permissions, const OptArgs &opts) {
 
   // up to here, we don't check if the file is valid
   // because the edit config command can edit invalid files
-  if (!permissions.Size() > 0) {
-    throw doas::PermissionError("doas.conf is either invalid or empty.\n! notice that you're not a member of 'wheel'");
+  if ((!permissions.Size()) > 0) {
+    throw doas::PermissionError(
+        "doas.conf is either invalid or empty.\n! notice that you're not a "
+        "member of 'wheel'");
   }
 
   if (opts.ShowPermissions()) {
@@ -133,9 +129,8 @@ int Do(Permissions &permissions, const OptArgs &opts) {
 
   std::vector<char *> envs;
 
-  DoAs(opts.AsUser(),
-       opts.CommandArguments(),
-       GetEnv(envs, permissions, opts));
+  DoAs(opts.AsUser(), opts.CommandArguments(), GetEnv(envs, permissions, opts));
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -147,12 +142,10 @@ int main(int argc, char *argv[]) {
     Permissions permissions{PATH_CONFIG, opts.AuthService()};
 
     return Do(permissions, opts);
-  }
-  catch (InvalidUsage &) {
+  } catch (InvalidUsage &) {
     ShowUsage();
     return 1;
-  }
-  catch (DoAsError &e) {
+  } catch (DoAsError &e) {
     std::cerr << e.what() << std::endl;
 
     return 1;

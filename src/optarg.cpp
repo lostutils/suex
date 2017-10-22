@@ -1,13 +1,13 @@
-#include <sstream>
-#include <path.h>
-#include <cstring>
-#include <optarg.h>
-#include <fstream>
-#include <logger.h>
 #include <auth.h>
-#include <version.h>
 #include <conf.h>
 #include <exceptions.h>
+#include <logger.h>
+#include <optarg.h>
+#include <path.h>
+#include <version.h>
+#include <cstring>
+#include <fstream>
+#include <sstream>
 
 using namespace doas;
 using namespace doas::utils;
@@ -18,11 +18,11 @@ OptArgs::OptArgs(int argc, char *argv[]) {
   if (optind == argc) {
     return;
   }
-  args_ = std::vector<char *> {argv + optind, argv + argc};
+  args_ = std::vector<char *>{argv + optind, argv + argc};
   // low level c code needs an indication when an array of pointers ends
-  args_.emplace_back((char *) nullptr);
+  args_.emplace_back((char *)nullptr);
   binary_ = path::Locate(args_.front());
-  args_.front() = (char *) binary_.c_str();
+  args_.front() = (char *)binary_.c_str();
 }
 
 int OptArgs::GetArgumentCount(int argc, char *argv[]) {
@@ -36,9 +36,8 @@ int OptArgs::GetArgumentCount(int argc, char *argv[]) {
       continue;
     }
 
-    if (std::find(param_opts.begin(),
-                  param_opts.end(),
-                  prevopt) != param_opts.end()) {
+    if (std::find(param_opts.begin(), param_opts.end(), prevopt) !=
+        param_opts.end()) {
       continue;
     }
 
@@ -83,10 +82,7 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
         if (env::Contains("SHELL")) {
           shell = env::Get("SHELL");
         }
-        args_ = std::vector<char *> {
-            strdup(shell.c_str()),
-            nullptr
-        };
+        args_ = std::vector<char *>{strdup(shell.c_str()), nullptr};
         break;
       }
       case 'E': {
@@ -120,4 +116,3 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
     }
   }
 }
-

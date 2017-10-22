@@ -1,20 +1,19 @@
 #include <conf.h>
-#include <logger.h>
-#include <glob.h>
 #include <exceptions.h>
+#include <glob.h>
+#include <logger.h>
 
 using namespace doas;
 using namespace doas::utils;
 using namespace doas::permissions;
 
-void ProcessEnv(const std::string &txt,
-                Entity::HashTable &upsert,
+void ProcessEnv(const std::string &txt, Entity::HashTable &upsert,
                 Entity::Collection &remove) {
-
   unsigned long openTokenIdx = txt.find_first_of('{');
   unsigned long closeTokenIdx = txt.find_last_of('}');
 
-  std::istringstream iss{txt.substr(openTokenIdx + 1, closeTokenIdx - openTokenIdx - 1)};
+  std::istringstream iss{
+      txt.substr(openTokenIdx + 1, closeTokenIdx - openTokenIdx - 1)};
   while (iss) {
     std::string token;
     iss >> token;
@@ -50,7 +49,7 @@ void ProcessEnv(const std::string &txt,
 }
 
 bool Permissions::IsFileSecure(const std::string &path) {
-  struct stat fstat{};
+  struct stat fstat {};
 
   if (stat(path.c_str(), &fstat) != 0) {
     throw doas::IOError(std::strerror(errno));
@@ -64,8 +63,8 @@ bool Permissions::IsFileSecure(const std::string &path) {
 
   // config file has to be owned by root:root
   if (fstat.st_uid != 0 || fstat.st_gid != 0) {
-    logger::error() << "invalid file owner: " << User(fstat.st_uid).Name() << ":"
-                    << Group(fstat.st_gid).Name();
+    logger::error() << "invalid file owner: " << User(fstat.st_uid).Name()
+                    << ":" << Group(fstat.st_gid).Name();
     return false;
   }
   return true;
@@ -86,7 +85,7 @@ std::vector<User> &GetUsers(const std::string &user, std::vector<User> &users) {
 }
 
 bool IsExecutable(const std::string &path) {
-  struct stat st{};
+  struct stat st {};
   if (stat(path.c_str(), &st) < 0) {
     throw doas::IOError("couldn't get executable stat");
   }
@@ -94,14 +93,17 @@ bool IsExecutable(const std::string &path) {
   return (st.st_mode & S_IEXEC) == S_IEXEC && S_ISREG(st.st_mode);
 }
 
-const std::vector<std::string> &GetExecutables(const std::string &glob_pattern, std::vector<std::string> &vec) {
+const std::vector<std::string> &GetExecutables(const std::string &glob_pattern,
+                                               std::vector<std::string> &vec) {
   glob_t globbuf{};
   int retval = glob(glob_pattern.c_str(), 0, nullptr, &globbuf);
   DEFER(globfree(&globbuf));
 
   if (retval != 0) {
-    logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval << std::endl;
-    logger::warning() << "there are no executables at " << glob_pattern << std::endl;
+    logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval
+                    << std::endl;
+    logger::warning() << "there are no executables at " << glob_pattern
+                      << std::endl;
     return vec;
   }
 
@@ -113,19 +115,22 @@ const std::vector<std::string> &GetExecutables(const std::string &glob_pattern, 
   }
 
   if (vec.size() == 1 && !IsExecutable(vec.front())) {
-    throw doas::PermissionError("%s is not executable (missing +x flag)", vec.front().c_str());
+    throw doas::PermissionError("%s is not executable (missing +x flag)",
+                                vec.front().c_str());
   }
 
   return vec;
 }
 
 void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
-  logger::debug() << "parsing line " << lineno << ": '" << line << "'" << std::endl;
+  logger::debug() << "parsing line " << lineno << ": '" << line << "'"
+                  << std::endl;
 
   std::smatch matches;
   //  a comment, no need to parse
   if (std::regex_match(line, matches, comment_re_)) {
-    logger::debug() << "line " << lineno << " is a comment, skipping." << std::endl;
+    logger::debug() << "line " << lineno << " is a comment, skipping."
+                    << std::endl;
     return;
   }
 
@@ -150,7 +155,6 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
   for (auto it = opts.cbegin();
        std::regex_search(it, opts.cend(), opt_matches, opt_re_);
        it += opt_matches.position() + opt_matches.length()) {
-
     std::string opt_match{opt_matches.str()};
     if (opt_match == "nopass") {
       nopass = true;
@@ -172,7 +176,6 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
     throw doas::PermissionError("destination user doesn't exist");
   }
 
-
   // disallow running any cmd as root with nopass
   std::string cmd_binary_{matches[7].str()};
   if (cmd_binary_.empty() && nopass && as_user.Id() == 0) {
@@ -184,7 +187,8 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
     // parse the args
     std::string cmd_args{matches[10].str()};
     if (!cmd_args.empty()) {
-      // the regex is reversed because c++11 doesn't support negative lookbehind.
+      // the regex is reversed because c++11 doesn't support negative
+      // lookbehind.
       // instead, the regex has been reversed to look ahead.
       // this whole thing isn't too costly because the lines are short.
       std::reverse(cmd_args.begin(), cmd_args.end());
@@ -197,26 +201,24 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
     // populate the permissions vector
     std::vector<User> users;
     for (User &user : GetUsers(matches[4], users)) {
-
       if (only_user && user.Id() != running_user.Id()) {
-        logger::debug() << "skipping user '" << user.Name() << "' - only user mode" << std::endl;
+        logger::debug() << "skipping user '" << user.Name()
+                        << "' - only user mode" << std::endl;
       }
 
       if (!user.Exists()) {
         throw doas::PermissionError("user doesn't exist");
       }
 
-      perms_.emplace_back(permissions::Entity(user, as_user, deny,
-                                              keepenv, nopass, persist,
-                                              env_to_add,
-                                              env_to_remove,
-                                              cmd_re));
+      perms_.emplace_back(permissions::Entity(user, as_user, deny, keepenv,
+                                              nopass, persist, env_to_add,
+                                              env_to_remove, cmd_re));
     }
-
   }
   logger::debug() << "line " << lineno << " parsed successfully" << std::endl;
 }
-const Entity *Permissions::Get(const permissions::User &user, char *const *cmdargv) const {
+const Entity *Permissions::Get(const permissions::User &user,
+                               char *const *cmdargv) const {
   std::string cmd = std::string(*cmdargv);
   std::string cmdtxt{utils::CommandArgsText(cmdargv)};
 
@@ -231,7 +233,8 @@ const Entity *Permissions::Get(const permissions::User &user, char *const *cmdar
   return perm;
 }
 
-bool Permissions::Validate(const std::string &path, const std::string &auth_service) {
+bool Permissions::Validate(const std::string &path,
+                           const std::string &auth_service) {
   Permissions perms{path, auth_service, false};
   return perms.Size() > 0;
 }
@@ -248,13 +251,14 @@ void Permissions::SecureFile(const std::string &path) {
   }
 }
 
-Permissions::Permissions(const std::string &path, const std::string &auth_service, bool only_user)
+Permissions::Permissions(const std::string &path,
+                         const std::string &auth_service, bool only_user)
     : path_{path}, auth_service_{auth_service} {
   if (path_ == PATH_CONFIG) {
     if (!path::Exists(path_)) {
       std::fstream fs;
       fs.open(path_, std::ios::out);
-      DEFER (fs.close());
+      DEFER(fs.close());
       fs << "# Welcome to doas!";
       Permissions::SecureFile(path_);
     }
@@ -271,8 +275,8 @@ void Permissions::Reload(bool only_user) {
   perms_.clear();
 
   if (Privileged()) {
-    auto p = permissions::Entity(running_user, root_user, false,
-                                 true, false, true, ".+");
+    auto p = permissions::Entity(running_user, root_user, false, true, false,
+                                 true, ".+");
     perms_.emplace(perms_.begin(), p);
   }
 
@@ -290,4 +294,3 @@ void Permissions::Reload(bool only_user) {
     }
   }
 }
-

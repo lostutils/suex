@@ -1,21 +1,16 @@
 #pragma once
 
-#include <fstream>
-#include <ostream>
-#include <perm.h>
-#include <iostream>
 #include <path.h>
+#include <perm.h>
+#include <fstream>
+#include <iostream>
+#include <ostream>
 
 using namespace doas;
 
 namespace doas::logger {
 
-enum Type {
-  DEBUG,
-  INFO,
-  WARNING,
-  ERROR
-};
+enum Type { DEBUG, INFO, WARNING, ERROR };
 
 class Logger {
  public:
@@ -40,26 +35,16 @@ class Logger {
 
   explicit Logger(Type type);
   Logger(const Logger &other);
-  permissions::User user_{};
   Type type_;
+  permissions::User user_{};
   bool verbose_{false};
 };
 
-static Logger &debug() {
-  return Logger::get(Type::DEBUG);
-}
+Logger &debug();
 
-static Logger &info() {
-  return Logger::get(Type::INFO);
-}
+Logger &info();
 
-static Logger &warning() {
-  return Logger::get(Type::WARNING);
-}
+Logger &warning();
 
-static Logger &error() {
-  return Logger::get(Type::ERROR);
-}
-
+Logger &error();
 };
-

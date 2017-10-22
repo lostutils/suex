@@ -1,10 +1,10 @@
 #pragma once
 #include <getopt.h>
-#include <vector>
 #include <perm.h>
+#include <utils.h>
 #include <iostream>
 #include <regex>
-#include <utils.h>
+#include <vector>
 
 namespace doas::optargs {
 #define PATH_CONFIG "/etc/doas.conf"
@@ -14,9 +14,7 @@ class OptArgs {
  public:
   OptArgs(int argc, char *argv[]);
 
-  char *const *CommandArguments() const {
-    return args_.data();
-  }
+  char *const *CommandArguments() const { return args_.data(); }
 
   const std::string &ConfigPath() const { return config_path_; }
 
@@ -53,6 +51,4 @@ class OptArgs {
   bool verbose_mode_{false};
   permissions::User user_{root_user};
 };
-
 }
-

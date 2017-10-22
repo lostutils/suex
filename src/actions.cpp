@@ -1,8 +1,8 @@
 #include <actions.h>
 #include <auth.h>
+#include <exceptions.h>
 #include <logger.h>
 #include <version.h>
-#include <exceptions.h>
 #include <wait.h>
 
 using namespace doas;
@@ -22,7 +22,8 @@ void doas::ShowPermissions(permissions::Permissions &permissions) {
   }
 }
 
-const permissions::Entity *doas::Permit(const Permissions &perms, const OptArgs &opts) {
+const permissions::Entity *doas::Permit(const Permissions &perms,
+                                        const OptArgs &opts) {
   char *const *cmdargv{opts.CommandArguments()};
   auto perm = perms.Get(opts.AsUser(), cmdargv);
   if (perm == nullptr || perm->Deny()) {
@@ -33,8 +34,9 @@ const permissions::Entity *doas::Permit(const Permissions &perms, const OptArgs 
   }
 
   if (perm->PromptForPassword()) {
-    std::string cache_token { perm->CacheAuth() ? perm->Command() : ""};
-    if (!auth::Authenticate(perms.AuthService(), opts.Interactive(), cache_token)) {
+    std::string cache_token{perm->CacheAuth() ? perm->Command() : ""};
+    if (!auth::Authenticate(perms.AuthService(), opts.Interactive(),
+                            cache_token)) {
       throw doas::PermissionError("Incorrect password");
     }
   }
@@ -48,16 +50,19 @@ void doas::DoAs(const User &user, char *const cmdargv[], char *const envp[]) {
   // set permissions to requested id and gid
   permissions::Set(user);
 
-  // execute with uid and gid. path lookup is done internally, so execvp is not needed.
+  // execute with uid and gid. path lookup is done internally, so execvp is not
+  // needed.
   execvpe(cmdargv[0], &cmdargv[0], envp);
 
   // will not get here unless execvp failed
-  throw std::runtime_error(utils::CommandArgsText(cmdargv) + " : " + std::strerror(errno));
+  throw std::runtime_error(utils::CommandArgsText(cmdargv) + " : " +
+                           std::strerror(errno));
 }
 
 void doas::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
   if (!permissions.Privileged()) {
-    throw doas::PermissionError("Access denied. You are not allowed to view verbose output.");
+    throw doas::PermissionError(
+        "Access denied. You are not allowed to view verbose output.");
   }
   logger::debug().VerboseOn();
   logger::info().VerboseOn();
@@ -73,23 +78,25 @@ void doas::ClearAuthTokens(const Permissions &permissions) {
   logger::info() << "cleared " << cleared << " tokens" << std::endl;
 }
 
-void doas::ShowVersion() {
-  std::cout << "doas: " << VERSION << std::endl;
-}
+void doas::ShowVersion() { std::cout << "doas: " << VERSION << std::endl; }
 
-void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions) {
-
+void doas::EditConfiguration(const OptArgs &opts,
+                             const Permissions &permissions) {
   if (!permissions.Privileged()) {
-    throw doas::PermissionError("Access denied. You are not allowed to edit the config file");
+    throw doas::PermissionError(
+        "Access denied. You are not allowed to edit the config file");
   }
 
   // verbose is needed when editing
   TurnOnVerboseOutput(permissions);
 
   if (utils::path::Exists(PATH_EDIT_LOCK)) {
-    auto prompt = "doas.conf is already being edited from another session, do you want to continue anyway?";
+    auto prompt =
+        "doas.conf is already being edited from another session, do you want "
+        "to continue anyway?";
     if (!utils::AskQuestion(prompt)) {
-      throw doas::PermissionError("doas.conf is being edited from another session");
+      throw doas::PermissionError(
+          "doas.conf is being edited from another session");
     }
     if (remove(PATH_EDIT_LOCK) != 0) {
       throw doas::IOError("%s: %s", PATH_EDIT_LOCK, std::strerror(errno));
@@ -108,23 +115,19 @@ void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions
   Permissions::SecureFile(tmpconf);
 
   DEFER({
-          if (remove(PATH_EDIT_LOCK) != 0) {
-            throw doas::IOError("%s: %s", PATH_EDIT_LOCK, std::strerror(errno));
-          }
+    if (remove(PATH_EDIT_LOCK) != 0) {
+      throw doas::IOError("%s: %s", PATH_EDIT_LOCK, std::strerror(errno));
+    }
 
-          if (utils::path::Exists(tmpconf) &&
-              remove(tmpconf.c_str()) != 0) {
-            throw doas::IOError("%s: %s", tmpconf.c_str(), std::strerror(errno));
-          }
-        });
+    if (utils::path::Exists(tmpconf) && remove(tmpconf.c_str()) != 0) {
+      throw doas::IOError("%s: %s", tmpconf.c_str(), std::strerror(errno));
+    }
+  });
 
   utils::path::Copy(PATH_CONFIG, tmpconf);
 
-  std::vector<char *> cmdargv{
-      strdup(utils::GetEditor().c_str()),
-      strdup(tmpconf.c_str()),
-      nullptr
-  };
+  std::vector<char *> cmdargv{strdup(utils::GetEditor().c_str()),
+                              strdup(tmpconf.c_str()), nullptr};
 
   // loop until configuration is valid
   // or user asked to stop
@@ -142,7 +145,8 @@ void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions
 
     // parent process should wait until the child exists
     int status;
-    while (-1 == waitpid(pid, &status, 0));
+    while (-1 == waitpid(pid, &status, 0))
+      ;
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
       throw std::runtime_error("error while waiting for $EDITOR");
     }
@@ -155,8 +159,8 @@ void doas::EditConfiguration(const OptArgs &opts, const Permissions &permissions
       return;
     }
 
-    std::string prompt{utils::StringFormat("%s is invalid. Do you want to try again?",
-                                           PATH_CONFIG)};
+    std::string prompt{utils::StringFormat(
+        "%s is invalid. Do you want to try again?", PATH_CONFIG)};
     if (!utils::AskQuestion(prompt)) {
       std::cout << PATH_CONFIG << " changes discarded." << std::endl;
       return;
@@ -181,5 +185,6 @@ void doas::CheckConfiguration(const OptArgs &opts) {
     std::cout << "deny" << std::endl;
     return;
   }
-  std::cout << "permit" << (!perm->PromptForPassword() ? " nopass" : "") << std::endl;
+  std::cout << "permit" << (!perm->PromptForPassword() ? " nopass" : "")
+            << std::endl;
 }

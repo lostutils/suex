@@ -1,27 +1,25 @@
-#include <perm.h>
-#include <iostream>
-#include <logger.h>
-#include <utils.h>
 #include <exceptions.h>
-#include <pwd.h>
 #include <grp.h>
+#include <logger.h>
+#include <perm.h>
+#include <pwd.h>
+#include <utils.h>
+#include <iostream>
 
 using namespace doas;
 using namespace doas::permissions;
 
 std::ostream &permissions::operator<<(std::ostream &os, const Entity &e) {
-  os << (e.Deny() ? "deny" : "permit") << " "
-     << e.Owner().Name()
-     << " as " << e.AsUser().Name() << " ";
+  os << (e.Deny() ? "deny" : "permit") << " " << e.Owner().Name() << " as "
+     << e.AsUser().Name() << " ";
 
   std::stringstream opts_ss;
-  opts_ss << (e.PromptForPassword() ? "" : "nopass ") <<
-          (e.KeepEnvironment() ? "keepenv " : "") <<
-          (e.CacheAuth() ? "persist " : "");
+  opts_ss << (e.PromptForPassword() ? "" : "nopass ")
+          << (e.KeepEnvironment() ? "keepenv " : "")
+          << (e.CacheAuth() ? "persist " : "");
 
-  os << "options " <<
-     (opts_ss.tellp() == 0 ? "- " : opts_ss.str()) <<
-     "cmd " << e.Command();
+  os << "options " << (opts_ss.tellp() == 0 ? "- " : opts_ss.str()) << "cmd "
+     << e.Command();
   return os;
 }
 
@@ -36,7 +34,8 @@ bool Entity::CanExecute(const User &user, const std::string &cmd) const {
 
   std::smatch matches;
   bool matched{std::regex_match(cmd, matches, cmd_re_)};
-  logger::debug() << (matched ? "Y" : "N") << " " << cmd_re_txt_ << " ~= " << cmd << std::endl;
+  logger::debug() << (matched ? "Y" : "N") << " " << cmd_re_txt_
+                  << " ~= " << cmd << std::endl;
   return matched;
 }
 
@@ -47,7 +46,8 @@ int setgroups(const User &user) {
   std::vector<gid_t> groupvec{};
 
   while (true) {
-    if (getgrouplist(name, (gid_t) user.GroupId(), &groupvec.front(), &ngroups) < 0) {
+    if (getgrouplist(name, (gid_t)user.GroupId(), &groupvec.front(), &ngroups) <
+        0) {
       groupvec.resize(static_cast<unsigned long>(ngroups));
       continue;
     }
@@ -57,14 +57,16 @@ int setgroups(const User &user) {
 
 void permissions::Set(const User &user) {
   if (setgroups(user) < 0) {
-    throw doas::PermissionError("execution of setgroups(%d) failed", user.GroupId());
+    throw doas::PermissionError("execution of setgroups(%d) failed",
+                                user.GroupId());
   }
 
-  if (setgid((gid_t) user.GroupId()) < 0) {
-    throw doas::PermissionError("execution of setgid(%d) failed", user.GroupId());
+  if (setgid((gid_t)user.GroupId()) < 0) {
+    throw doas::PermissionError("execution of setgid(%d) failed",
+                                user.GroupId());
   }
 
-  if (setuid((uid_t) user.Id()) < 0) {
+  if (setuid((uid_t)user.Id()) < 0) {
     throw doas::PermissionError("execution of setuid(%d) failed", user.Id());
   }
 }
@@ -73,7 +75,6 @@ User::User(uid_t uid) : uid_{-1} {
   struct passwd *pw = getpwuid(uid);
   if (pw == nullptr) {
     return;
-
   }
   uid_ = pw->pw_uid;
   name_ = pw->pw_name;
@@ -88,7 +89,8 @@ User::User(const std::string &user) : uid_{-1} {
   // otherwise try to take the one that was passed.
 
   // if both fail, also try to load the user as a uid.
-  struct passwd *pw = user.empty() ? getpwuid((uid_t) running_user.Id()) : getpwnam(user.c_str());
+  struct passwd *pw = user.empty() ? getpwuid((uid_t)running_user.Id())
+                                   : getpwnam(user.c_str());
 
   if (pw == nullptr) {
     try {
@@ -117,29 +119,17 @@ User::User(const User &user) {
   shell_ = user.shell_;
 }
 
-bool User::operator==(const User &other) const {
-  return uid_ == other.uid_;
-}
+bool User::operator==(const User &other) const { return uid_ == other.uid_; }
 
-bool User::operator!=(const User &other) const {
-  return !(other == *this);
-}
+bool User::operator!=(const User &other) const { return !(other == *this); }
 
-bool User::operator<(const User &other) const {
-  return uid_ < other.uid_;
-}
+bool User::operator<(const User &other) const { return uid_ < other.uid_; }
 
-bool User::operator>(const User &other) const {
-  return other < *this;
-}
+bool User::operator>(const User &other) const { return other < *this; }
 
-bool User::operator<=(const User &other) const {
-  return !(other < *this);
-}
+bool User::operator<=(const User &other) const { return !(other < *this); }
 
-bool User::operator>=(const User &other) const {
-  return !(*this < other);
-}
+bool User::operator>=(const User &other) const { return !(*this < other); }
 
 Group::Group(gid_t gid) : gid_{-1} {
   struct group *gr = getgrgid(gid);
@@ -184,27 +174,15 @@ Group::Group(const std::string &grp) : gid_{-1} {
     members_.emplace(User(*it));
   }
 }
-bool Group::operator==(const Group &other) const {
-  return gid_ == other.gid_;
-}
-bool Group::operator!=(const Group &other) const {
-  return !(other == *this);
-}
+bool Group::operator==(const Group &other) const { return gid_ == other.gid_; }
+bool Group::operator!=(const Group &other) const { return !(other == *this); }
 
 Group::Group(const Group &grp) {
   name_ = grp.name_;
   gid_ = grp.gid_;
   members_ = grp.members_;
 }
-bool Group::operator<(const Group &other) const {
-  return gid_ < other.gid_;
-}
-bool Group::operator>(const Group &other) const {
-  return other < *this;
-}
-bool Group::operator<=(const Group &other) const {
-  return !(other < *this);
-}
-bool Group::operator>=(const Group &other) const {
-  return !(*this < other);
-}
+bool Group::operator<(const Group &other) const { return gid_ < other.gid_; }
+bool Group::operator>(const Group &other) const { return other < *this; }
+bool Group::operator<=(const Group &other) const { return !(other < *this); }
+bool Group::operator>=(const Group &other) const { return !(*this < other); }
