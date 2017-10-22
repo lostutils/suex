@@ -67,7 +67,7 @@ $ mkdir -p suex/build && cd suex/build && cmake .. && cd ..
 
 ## Project Status
 
-Version `0.2.1` is out and has complete feature parity with the OpenBSD's `doas`.
+Version `0.2.2` is out and has complete feature parity with the OpenBSD's `doas`.
 
 ## Authors
 
