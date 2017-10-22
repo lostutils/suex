@@ -4,10 +4,10 @@
 #include <utils.h>
 #include <iomanip>
 
-using namespace doas;
-using namespace doas::optargs;
-using namespace doas::permissions;
-using namespace doas::utils;
+using namespace suex;
+using namespace suex::optargs;
+using namespace suex::permissions;
+using namespace suex::utils;
 
 std::string utils::CommandArgsText(char *const *cmdargv) {
   std::stringstream ss;
@@ -21,17 +21,17 @@ std::string utils::CommandArgsText(char *const *cmdargv) {
 void utils::ValidateBinaryOwnership(const std::string &path) {
   struct stat fstat {};
   if (stat(path::Locate(path).c_str(), &fstat) != 0) {
-    throw doas::PermissionError("couldn't locate doas binary");
+    throw suex::PermissionError("couldn't locate suex binary");
   }
 
   if ((fstat.st_mode & S_ISUID) == 0) {
-    throw doas::PermissionError(
+    throw suex::PermissionError(
         "set user ID upon execution (suid) access not granted for '%s'",
         path.c_str());
   }
 
   if (fstat.st_uid != 0 || fstat.st_gid != 0) {
-    throw doas::PermissionError("doas owner should be 'root:root'");
+    throw suex::PermissionError("suex owner should be 'root:root'");
   }
 }
 

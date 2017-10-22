@@ -1,5 +1,5 @@
 #pragma once
 
-namespace doas {
+namespace suex {
 #define VERSION "0.2.1"
 }

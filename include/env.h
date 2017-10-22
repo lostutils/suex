@@ -3,7 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace doas::env {
+namespace suex::env {
 char *const *Raw();
 std::string Get(const std::string &env);
 char *GetRaw(const std::string &env);

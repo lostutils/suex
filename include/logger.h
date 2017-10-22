@@ -6,9 +6,9 @@
 #include <iostream>
 #include <ostream>
 
-using namespace doas;
+using namespace suex;
 
-namespace doas::logger {
+namespace suex::logger {
 
 enum Type { DEBUG, INFO, WARNING, ERROR };
 

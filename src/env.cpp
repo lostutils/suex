@@ -1,6 +1,6 @@
 #include <env.h>
 #include <utils.h>
-using namespace doas;
+using namespace suex;
 
 char *const *env::Raw() { return environ; };
 

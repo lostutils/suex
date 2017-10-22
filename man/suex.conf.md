@@ -1,10 +1,10 @@
-DOAS.CONF(5) -- doas configuration file
+SUEX.CONF(5) -- suex configuration file
 =======================================
 
 ## DESCRIPTION
 
-The **doas(1)** utility executes commands as other users according to the rules
-in the **doas.conf** configuration file.
+The **suex(1)** utility executes commands as other users according to the rules
+in the **suex.conf** configuration file.
 
 rules have the following format:
 
@@ -72,8 +72,8 @@ The following quoting rules apply:
 
 ## FILES
 
-  * `/etc/doas.conf`:
-   Doas configuration file.
+  * `/etc/suex.conf`:
+   SuEx configuration file.
 
 ## EAMPLES
 
@@ -81,7 +81,7 @@ The following quoting rules apply:
 
 ## SEE ALSO
 
-su(1), doas.conf(5), pam(5), pam.d(5), glob(3)
+su(1), suex.conf(5), pam(5), pam.d(5), glob(3)
 
 ## AUTHORS
 

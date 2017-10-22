@@ -1,10 +1,10 @@
 #pragma once
 #include <string>
 
-namespace doas::auth {
+namespace suex::auth {
 
 #define PATH_VAR_RUN "/var/run"
-#define PATH_DOAS_TMP PATH_VAR_RUN "/doas"
+#define PATH_SUEX_TMP PATH_VAR_RUN "/suex"
 #define PATH_PAM_POlICY "/etc/pam.d"
 
 int ClearTokens(const std::string &service_name);

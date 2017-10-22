@@ -6,8 +6,8 @@
 #include <utils.h>
 #include <iostream>
 
-using namespace doas;
-using namespace doas::permissions;
+using namespace suex;
+using namespace suex::permissions;
 
 std::ostream &permissions::operator<<(std::ostream &os, const Entity &e) {
   os << (e.Deny() ? "deny" : "permit") << " " << e.Owner().Name() << " as "
@@ -57,17 +57,17 @@ int setgroups(const User &user) {
 
 void permissions::Set(const User &user) {
   if (setgroups(user) < 0) {
-    throw doas::PermissionError("execution of setgroups(%d) failed",
+    throw suex::PermissionError("execution of setgroups(%d) failed",
                                 user.GroupId());
   }
 
   if (setgid((gid_t)user.GroupId()) < 0) {
-    throw doas::PermissionError("execution of setgid(%d) failed",
+    throw suex::PermissionError("execution of setgid(%d) failed",
                                 user.GroupId());
   }
 
   if (setuid((uid_t)user.Id()) < 0) {
-    throw doas::PermissionError("execution of setuid(%d) failed", user.Id());
+    throw suex::PermissionError("execution of setuid(%d) failed", user.Id());
   }
 }
 

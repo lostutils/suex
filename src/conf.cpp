@@ -3,9 +3,9 @@
 #include <glob.h>
 #include <logger.h>
 
-using namespace doas;
-using namespace doas::utils;
-using namespace doas::permissions;
+using namespace suex;
+using namespace suex::utils;
+using namespace suex::permissions;
 
 void ProcessEnv(const std::string &txt, Entity::HashTable &upsert,
                 Entity::Collection &remove) {
@@ -52,12 +52,12 @@ bool Permissions::IsFileSecure(const std::string &path) {
   struct stat fstat {};
 
   if (stat(path.c_str(), &fstat) != 0) {
-    throw doas::IOError(std::strerror(errno));
+    throw suex::IOError(std::strerror(errno));
   }
 
   // config file can only have read permissions for user and group
   if (utils::PermissionBits(fstat) != 440) {
-    logger::error() << "invalid doas.conf permission bits" << std::endl;
+    logger::error() << "invalid suex.conf permission bits" << std::endl;
     return false;
   }
 
@@ -73,7 +73,7 @@ std::vector<User> &GetUsers(const std::string &user, std::vector<User> &users) {
   if (user[0] == ':') {
     Group grp{user.substr(1, user.npos)};
     if (!grp.Exists()) {
-      throw doas::PermissionError("group %s doesn't exist", grp.Name().c_str());
+      throw suex::PermissionError("group %s doesn't exist", grp.Name().c_str());
     }
     for (auto mem : grp) {
       users.emplace_back(mem);
@@ -87,7 +87,7 @@ std::vector<User> &GetUsers(const std::string &user, std::vector<User> &users) {
 bool IsExecutable(const std::string &path) {
   struct stat st {};
   if (stat(path.c_str(), &st) < 0) {
-    throw doas::IOError("couldn't get executable stat");
+    throw suex::IOError("couldn't get executable stat");
   }
   // ignore non executables
   return (st.st_mode & S_IEXEC) == S_IEXEC && S_ISREG(st.st_mode);
@@ -115,7 +115,7 @@ const std::vector<std::string> &GetExecutables(const std::string &glob_pattern,
   }
 
   if (vec.size() == 1 && !IsExecutable(vec.front())) {
-    throw doas::PermissionError("%s is not executable (missing +x flag)",
+    throw suex::PermissionError("%s is not executable (missing +x flag)",
                                 vec.front().c_str());
   }
 
@@ -142,7 +142,7 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
 
   if (!std::regex_search(line, matches, line_re_)) {
     logger::debug() << "couldn't parse: " << line << std::endl;
-    throw doas::ConfigError("line invalid");
+    throw suex::ConfigError("line invalid");
   }
 
   bool deny = matches[1] == "deny";
@@ -173,13 +173,13 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
   // extract the destination user
   User as_user = User(matches[6]);
   if (!as_user.Exists()) {
-    throw doas::PermissionError("destination user doesn't exist");
+    throw suex::PermissionError("destination user doesn't exist");
   }
 
   // disallow running any cmd as root with nopass
   std::string cmd_binary_{matches[7].str()};
   if (cmd_binary_.empty() && nopass && as_user.Id() == 0) {
-    throw doas::PermissionError("cmd doesn't exist but nopass is set");
+    throw suex::PermissionError("cmd doesn't exist but nopass is set");
   }
 
   std::vector<std::string> binaries;
@@ -207,7 +207,7 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
       }
 
       if (!user.Exists()) {
-        throw doas::PermissionError("user doesn't exist");
+        throw suex::PermissionError("user doesn't exist");
       }
 
       perms_.emplace_back(permissions::Entity(user, as_user, deny, keepenv,
@@ -222,7 +222,7 @@ const Entity *Permissions::Get(const permissions::User &user,
   std::string cmd = std::string(*cmdargv);
   std::string cmdtxt{utils::CommandArgsText(cmdargv)};
 
-  // take the latest one you find (like the original doas)
+  // take the latest one you find (like the original suex)
   const Entity *perm = nullptr;
   for (const permissions::Entity &p : perms_) {
     if (p.CanExecute(user, cmdtxt)) {
@@ -242,12 +242,12 @@ bool Permissions::Validate(const std::string &path,
 void Permissions::SecureFile(const std::string &path) {
   // chmod 440
   if (chmod(path.c_str(), S_IRUSR | S_IRGRP) < 0) {
-    throw doas::PermissionError(std::strerror(errno));
+    throw suex::PermissionError(std::strerror(errno));
   }
 
   // chown root:root
   if (chown(path.c_str(), 0, 0) < 0) {
-    throw doas::PermissionError(std::strerror(errno));
+    throw suex::PermissionError(std::strerror(errno));
   }
 }
 
@@ -259,12 +259,12 @@ Permissions::Permissions(const std::string &path,
       std::fstream fs;
       fs.open(path_, std::ios::out);
       DEFER(fs.close());
-      fs << "# Welcome to doas!";
+      fs << "# Welcome to suex!";
       Permissions::SecureFile(path_);
     }
 
     if (!Permissions::IsFileSecure(path_)) {
-      throw doas::PermissionError("doas.conf has invalid permissions");
+      throw suex::PermissionError("suex.conf has invalid permissions");
     }
   }
 

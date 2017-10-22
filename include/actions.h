@@ -5,7 +5,7 @@
 #include <env.h>
 #include <optarg.h>
 
-namespace doas {
+namespace suex {
 
 void TurnOnVerboseOutput(const permissions::Permissions &permissions);
 
@@ -23,7 +23,7 @@ void CheckConfiguration(const optargs::OptArgs &opts);
 const permissions::Entity *Permit(const permissions::Permissions &permissions,
                                   const optargs::OptArgs &opts);
 
-void DoAs(const permissions::User &user,
-          char *const cmdargv[],
-          char *const envp[]);
+void SwitchUserAndExecute(const permissions::User &user,
+                          char *const *cmdargv,
+                          char *const *envp);
 }

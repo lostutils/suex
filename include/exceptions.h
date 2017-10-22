@@ -2,29 +2,29 @@
 #include <utils.h>
 #include <stdexcept>
 
-namespace doas {
+namespace suex {
 
-class DoAsError : public std::runtime_error {
+class SuExError : public std::runtime_error {
  public:
-  explicit DoAsError(const std::string &text) : runtime_error(text) {}
+  explicit SuExError(const std::string &text) : runtime_error(text) {}
 
   template <typename... Args>
-  explicit DoAsError(const std::string &format, Args &&... args)
+  explicit SuExError(const std::string &format, Args &&... args)
       : runtime_error(utils::StringFormat(format,
                                           std::forward<Args>(args)...)) {}
 };
 
-class InvalidUsage : public DoAsError {
+class InvalidUsage : public SuExError {
  public:
-  explicit InvalidUsage() : DoAsError("") {}
+  explicit InvalidUsage() : SuExError("") {}
 };
 
-class PermissionError : public DoAsError {
+class PermissionError : public SuExError {
  public:
-  explicit PermissionError(const std::string &text) : DoAsError(text) {}
+  explicit PermissionError(const std::string &text) : SuExError(text) {}
   template <typename... Args>
   explicit PermissionError(const std::string &format, Args &&... args)
-      : DoAsError(format, std::forward<Args>(args)...) {}
+      : SuExError(format, std::forward<Args>(args)...) {}
 };
 
 class AuthError : public PermissionError {
@@ -35,19 +35,19 @@ class AuthError : public PermissionError {
       : PermissionError(format, std::forward<Args>(args)...) {}
 };
 
-class IOError : public DoAsError {
+class IOError : public SuExError {
  public:
-  explicit IOError(const std::string &text) : DoAsError(text) {}
+  explicit IOError(const std::string &text) : SuExError(text) {}
   template <typename... Args>
   explicit IOError(const std::string &format, Args &&... args)
-      : DoAsError(format, std::forward<Args>(args)...) {}
+      : SuExError(format, std::forward<Args>(args)...) {}
 };
 
-class ConfigError : public DoAsError {
+class ConfigError : public SuExError {
  public:
-  explicit ConfigError(const std::string &text) : DoAsError(text) {}
+  explicit ConfigError(const std::string &text) : SuExError(text) {}
   template <typename... Args>
   explicit ConfigError(const std::string &format, Args &&... args)
-      : DoAsError(format, std::forward<Args>(args)...) {}
+      : SuExError(format, std::forward<Args>(args)...) {}
 };
 }

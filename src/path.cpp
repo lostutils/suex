@@ -9,8 +9,8 @@
 #include <fstream>
 #include <sstream>
 
-using namespace doas;
-using namespace doas::utils;
+using namespace suex;
+using namespace suex::utils;
 
 const std::string path::Real(const std::string &path) {
   char buff[PATH_MAX] = {};
@@ -24,7 +24,7 @@ const std::string path::Real(const std::string &path) {
 
 const std::string path::Locate(const std::string &path, bool searchInPath) {
   if (path.empty()) {
-    throw doas::IOError("path '%s' is empty", path.c_str());
+    throw suex::IOError("path '%s' is empty", path.c_str());
   }
 
   struct stat fstat {};
@@ -45,7 +45,7 @@ const std::string path::Locate(const std::string &path, bool searchInPath) {
     }
   }
 
-  throw doas::IOError("path '%s' doesn't exist", path.c_str());
+  throw suex::IOError("path '%s' doesn't exist", path.c_str());
 }
 
 bool path::Exists(const std::string &path) {
@@ -62,38 +62,38 @@ void path::Copy(const std::string &source, const std::string &dest) {
 
   struct stat fstat {};
   if (stat(source.c_str(), &fstat) != 0) {
-    throw doas::IOError("%s: %s", source.c_str(), std::strerror(errno));
+    throw suex::IOError("%s: %s", source.c_str(), std::strerror(errno));
   }
 
   if (sendfile(dst_fd, src_fd, nullptr, (size_t)fstat.st_size) <= 0) {
-    throw doas::IOError("%s: %s", source.c_str(), std::strerror(errno));
+    throw suex::IOError("%s: %s", source.c_str(), std::strerror(errno));
   }
 }
 void path::Move(const std::string &source, const std::string &dest) {
   struct stat fstat {};
   if (stat(source.c_str(), &fstat) != 0) {
-    throw doas::IOError("%s: %s", dest.c_str(), std::strerror(errno));
+    throw suex::IOError("%s: %s", dest.c_str(), std::strerror(errno));
   }
 
   if (stat(dest.c_str(), &fstat) == 0) {
     if (remove(dest.c_str()) != 0) {
-      throw doas::IOError("%s: %s", dest.c_str(), std::strerror(errno));
+      throw suex::IOError("%s: %s", dest.c_str(), std::strerror(errno));
     }
   }
 
   Copy(source, dest);
 
   if (remove(source.c_str()) != 0) {
-    throw doas::IOError("%s: %s", source.c_str(), std::strerror(errno));
+    throw suex::IOError("%s: %s", source.c_str(), std::strerror(errno));
   }
 }
 void path::Touch(const std::string &pathname) {
   if (open(pathname.c_str(), O_WRONLY | O_CREAT | O_NOCTTY | O_NONBLOCK, 0666) <
       0) {
-    throw doas::IOError("%s: %s", pathname.c_str(), std::strerror(errno));
+    throw suex::IOError("%s: %s", pathname.c_str(), std::strerror(errno));
   }
 
   if (utimensat(AT_FDCWD, pathname.c_str(), nullptr, 0) != 0) {
-    throw doas::IOError("%s: %s", pathname.c_str(), std::strerror(errno));
+    throw suex::IOError("%s: %s", pathname.c_str(), std::strerror(errno));
   }
 }

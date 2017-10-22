@@ -41,8 +41,8 @@ build/
 deps/re2/lib
 
 # man
-man/doas.1
-man/doas.conf.5
+man/suex.1
+man/suex.conf.5
 man/*.html
 
 # tools

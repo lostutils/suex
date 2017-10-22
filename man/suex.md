@@ -1,13 +1,13 @@
-DOAS(1) -- execute commands as another user
+SUEX(1) -- execute commands as another user
 =============================================
 
 ## SYNOPSIS
 
-`doas` \[`-Lns`] \[`-a` *style*] \[`-C` *config*] \[`-u` *user*] *command* \[*args*]
+`suex` \[`-Lns`] \[`-a` *style*] \[`-C` *config*] \[`-u` *user*] *command* \[*args*]
 
 ## DESCRIPTION
 
-The **doas** utility executes the given command as another user.
+The **suex** utility executes the given command as another user.
 The command argument is mandatory unless `-C`, `-L`, or `-s` is specified.
 
 The options are as follows:
@@ -17,7 +17,7 @@ The options are as follows:
 
   * `-C` *config*:
     Parse and check the configuration file *config*, then exit. If *command* is
-    supplied, `doas` will also perform command matching. In the latter case either
+    supplied, `suex` will also perform command matching. In the latter case either
     ‘permit’, ‘permit nopass’ or ‘deny’ will be printed on standard output,
     depending on command matching results. No command is executed.
 
@@ -25,13 +25,13 @@ The options are as follows:
     Clear any persisted authorizations from previous invocations, then immediately exit. No command is executed.
 
   * `-n`:
-    Non interactive mode, fail if **doas** would prompt for password.
+    Non interactive mode, fail if **suex** would prompt for password.
 
   * `-u` *user*:
     Execute the command as user. The default is root.
 
   * `-E`:
-    Edit */etc/doas.conf*, fail if user is not a member of the *wheel* group.
+    Edit */etc/suex.conf*, fail if user is not a member of the *wheel* group.
 
   * `-D`:
     Print loaded permissions. Will print all permissions, unless user is not
@@ -48,17 +48,17 @@ The options are as follows:
 
 ## EXIT STATUS
 
-The `doas` utility exits 0 on success, and > 0 if an error occurs.  
+The `suex` utility exits 0 on success, and > 0 if an error occurs.  
 It may fail for one of the following reasons:
 
-   * The config file /etc/doas.conf could not be parsed.
+   * The config file /etc/suex.conf could not be parsed.
    * The user attempted to run a command which is not permitted.
    * The password was incorrect.
    * The specified command was not found or is not executable.
 
 ## SEE ALSO
 
-su(1), doas.conf(5), pam(5), pam.d(5)
+su(1), suex.conf(5), pam(5), pam.d(5)
 
 ## AUTHORS
 

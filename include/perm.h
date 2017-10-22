@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace doas::permissions {
+namespace suex::permissions {
 
 class User {
  public:

@@ -9,9 +9,9 @@
 #include <fstream>
 #include <sstream>
 
-using namespace doas;
-using namespace doas::utils;
-using namespace doas::optargs;
+using namespace suex;
+using namespace suex::utils;
+using namespace suex::optargs;
 
 OptArgs::OptArgs(int argc, char *argv[]) {
   int optind = ParseOpts(argc, argv);
@@ -101,7 +101,7 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
         // extract the username and group
         user_ = permissions::User(optarg);
         if (!user_.Exists()) {
-          throw doas::PermissionError("user '%s' doesn't exist", optarg);
+          throw suex::PermissionError("user '%s' doesn't exist", optarg);
         }
         break;
       }
@@ -111,7 +111,7 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
       }
       default: {
         // getopt will write the error, thus not need to do anything here
-        throw doas::InvalidUsage();
+        throw suex::InvalidUsage();
       }
     }
   }

@@ -6,7 +6,7 @@
 #include <regex>
 #include <string>
 
-namespace doas::permissions {
+namespace suex::permissions {
 
 static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
 

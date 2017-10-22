@@ -4,14 +4,14 @@
 #include <logger.h>
 #include <version.h>
 
-using namespace doas;
-using namespace doas::utils;
-using namespace doas::optargs;
-using namespace doas::env;
-using namespace doas::permissions;
+using namespace suex;
+using namespace suex::utils;
+using namespace suex::optargs;
+using namespace suex::env;
+using namespace suex::permissions;
 
 void ShowUsage() {
-  std::cout << "usage: doas [-LEVDvns] [-a style] [-C config] [-u user] "
+  std::cout << "usage: suex [-LEVDvns] [-a style] [-C config] [-u user] "
                "command [args]"
             << std::endl;
 }
@@ -19,26 +19,26 @@ void ShowUsage() {
 void CreateRunDirectory() {
   struct stat fstat {};
   if (stat(PATH_VAR_RUN, &fstat) != 0) {
-    throw doas::IOError(std::strerror(errno));
+    throw suex::IOError(std::strerror(errno));
   }
 
   // create the directory
-  if (stat(PATH_DOAS_TMP, &fstat) != 0) {
-    if (mkdir(PATH_DOAS_TMP, S_IRUSR | S_IRGRP) < 0) {
-      throw doas::IOError(std::strerror(errno));
+  if (stat(PATH_SUEX_TMP, &fstat) != 0) {
+    if (mkdir(PATH_SUEX_TMP, S_IRUSR | S_IRGRP) < 0) {
+      throw suex::IOError(std::strerror(errno));
     }
 
-    if (chown(PATH_DOAS_TMP, 0, 0) < 0) {
-      throw doas::PermissionError(std::strerror(errno));
+    if (chown(PATH_SUEX_TMP, 0, 0) < 0) {
+      throw suex::PermissionError(std::strerror(errno));
     }
 
-    if (stat(PATH_DOAS_TMP, &fstat) != 0) {
-      throw doas::IOError(std::strerror(errno));
+    if (stat(PATH_SUEX_TMP, &fstat) != 0) {
+      throw suex::IOError(std::strerror(errno));
     }
   }
 
   if (!S_ISDIR(fstat.st_mode)) {
-    throw doas::IOError("auth timestamp directory is not a directory");
+    throw suex::IOError("auth timestamp directory is not a directory");
   }
 }
 
@@ -97,8 +97,8 @@ int Do(Permissions &permissions, const OptArgs &opts) {
   // up to here, we don't check if the file is valid
   // because the edit config command can edit invalid files
   if ((!permissions.Size()) > 0) {
-    throw doas::PermissionError(
-        "doas.conf is either invalid or empty.\n! notice that you're not a "
+    throw suex::PermissionError(
+        "suex.conf is either invalid or empty.\n! notice that you're not a "
         "member of 'wheel'");
   }
 
@@ -129,7 +129,7 @@ int Do(Permissions &permissions, const OptArgs &opts) {
 
   std::vector<char *> envs;
 
-  DoAs(opts.AsUser(), opts.CommandArguments(), GetEnv(envs, permissions, opts));
+  SwitchUserAndExecute(opts.AsUser(), opts.CommandArguments(), GetEnv(envs, permissions, opts));
   return 0;
 }
 
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
   } catch (InvalidUsage &) {
     ShowUsage();
     return 1;
-  } catch (DoAsError &e) {
+  } catch (SuExError &e) {
     std::cerr << e.what() << std::endl;
 
     return 1;

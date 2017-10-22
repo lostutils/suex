@@ -17,4 +17,4 @@ deny odedlaz as root cmd /bin/rm args .*/home/odedlaz(/)?
 
 # allow the user to run any tools under the mentioned directory without
 # prompting for a password.
-permit keepenv nopass odedlaz as root cmd /home/odedlaz/Development/doas/tools/*
+permit keepenv nopass odedlaz as root cmd /home/odedlaz/Development/suex/tools/*

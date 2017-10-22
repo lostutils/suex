@@ -8,9 +8,9 @@
 #include <unistd.h>
 #include <iostream>
 
-static const auto running_user = doas::permissions::User(getuid());
-static const auto root_user = doas::permissions::User(0);
-static const auto wheel_group = doas::permissions::Group("wheel");
+static const auto running_user = suex::permissions::User(getuid());
+static const auto root_user = suex::permissions::User(0);
+static const auto wheel_group = suex::permissions::Group("wheel");
 
 #define CONCAT_(a, b) a##b
 #define CONCAT(a, b) CONCAT_(a, b)
@@ -38,12 +38,12 @@ class ScopeGuard {
   std::function<void()> fn_;
 };
 
-namespace doas::utils {
+namespace suex::utils {
 std::string CommandArgsText(char *const *cmdargv);
 
 void ValidateBinaryOwnership(const std::string &path);
 
-bool BypassPermissions(const doas::permissions::User &as_user);
+bool BypassPermissions(const suex::permissions::User &as_user);
 
 const std::string Iso8601();
 

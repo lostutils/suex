@@ -1,8 +1,8 @@
 #include <logger.h>
 #include <utils.h>
 
-using namespace doas;
-using namespace doas::logger;
+using namespace suex;
+using namespace suex::logger;
 
 const std::string TypeName(Type type) {
   switch (type) {

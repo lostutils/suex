@@ -3,7 +3,7 @@
 #include <string>
 #define PATH_DEV_NULL "/dev/null"
 
-namespace doas::utils::path {
+namespace suex::utils::path {
 
 bool Exists(const std::string &path);
 

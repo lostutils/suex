@@ -6,8 +6,8 @@
 #include <regex>
 #include <vector>
 
-namespace doas::optargs {
-#define PATH_CONFIG "/etc/doas.conf"
+namespace suex::optargs {
+#define PATH_CONFIG "/etc/suex.conf"
 #define DEFAULT_AUTH_SERVICE "su"
 
 class OptArgs {

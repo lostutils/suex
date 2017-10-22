@@ -5,14 +5,14 @@
 #include <version.h>
 #include <wait.h>
 
-using namespace doas;
-using doas::permissions::Permissions;
-using doas::permissions::User;
-using doas::optargs::OptArgs;
+using namespace suex;
+using suex::permissions::Permissions;
+using suex::permissions::User;
+using suex::optargs::OptArgs;
 
-#define PATH_EDIT_LOCK PATH_VAR_RUN "/doas/edit.lock"
+#define PATH_EDIT_LOCK PATH_VAR_RUN "/suex/edit.lock"
 
-void doas::ShowPermissions(permissions::Permissions &permissions) {
+void suex::ShowPermissions(permissions::Permissions &permissions) {
   if (permissions.Privileged()) {
     permissions.Reload(false);
   }
@@ -22,13 +22,13 @@ void doas::ShowPermissions(permissions::Permissions &permissions) {
   }
 }
 
-const permissions::Entity *doas::Permit(const Permissions &perms,
+const permissions::Entity *suex::Permit(const Permissions &perms,
                                         const OptArgs &opts) {
   char *const *cmdargv{opts.CommandArguments()};
   auto perm = perms.Get(opts.AsUser(), cmdargv);
   if (perm == nullptr || perm->Deny()) {
     std::stringstream ss;
-    throw doas::PermissionError("You are not allowed to execute '%s' as %s",
+    throw suex::PermissionError("You are not allowed to execute '%s' as %s",
                                 utils::CommandArgsText(cmdargv).c_str(),
                                 opts.AsUser().Name().c_str());
   }
@@ -37,13 +37,13 @@ const permissions::Entity *doas::Permit(const Permissions &perms,
     std::string cache_token{perm->CacheAuth() ? perm->Command() : ""};
     if (!auth::Authenticate(perms.AuthService(), opts.Interactive(),
                             cache_token)) {
-      throw doas::PermissionError("Incorrect password");
+      throw suex::PermissionError("Incorrect password");
     }
   }
   return perm;
 }
 
-void doas::DoAs(const User &user, char *const cmdargv[], char *const envp[]) {
+void suex::SwitchUserAndExecute(const User &user, char *const *cmdargv, char *const *envp) {
   // update the HOME env according to the as_user dir
   setenv("HOME", user.HomeDirectory().c_str(), 1);
 
@@ -59,9 +59,9 @@ void doas::DoAs(const User &user, char *const cmdargv[], char *const envp[]) {
                            std::strerror(errno));
 }
 
-void doas::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
+void suex::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
   if (!permissions.Privileged()) {
-    throw doas::PermissionError(
+    throw suex::PermissionError(
         "Access denied. You are not allowed to view verbose output.");
   }
   logger::debug().VerboseOn();
@@ -70,7 +70,7 @@ void doas::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
   logger::error().VerboseOn();
 }
 
-void doas::ClearAuthTokens(const Permissions &permissions) {
+void suex::ClearAuthTokens(const Permissions &permissions) {
   int cleared = auth::ClearTokens(permissions.AuthService());
   if (cleared < 0) {
     throw std::runtime_error("error while clearing tokens");
@@ -78,12 +78,12 @@ void doas::ClearAuthTokens(const Permissions &permissions) {
   logger::info() << "cleared " << cleared << " tokens" << std::endl;
 }
 
-void doas::ShowVersion() { std::cout << "doas: " << VERSION << std::endl; }
+void suex::ShowVersion() { std::cout << "suex: " << VERSION << std::endl; }
 
-void doas::EditConfiguration(const OptArgs &opts,
+void suex::EditConfiguration(const OptArgs &opts,
                              const Permissions &permissions) {
   if (!permissions.Privileged()) {
-    throw doas::PermissionError(
+    throw suex::PermissionError(
         "Access denied. You are not allowed to edit the config file");
   }
 
@@ -92,35 +92,35 @@ void doas::EditConfiguration(const OptArgs &opts,
 
   if (utils::path::Exists(PATH_EDIT_LOCK)) {
     auto prompt =
-        "doas.conf is already being edited from another session, do you want "
+        "suex.conf is already being edited from another session, do you want "
         "to continue anyway?";
     if (!utils::AskQuestion(prompt)) {
-      throw doas::PermissionError(
-          "doas.conf is being edited from another session");
+      throw suex::PermissionError(
+          "suex.conf is being edited from another session");
     }
     if (remove(PATH_EDIT_LOCK) != 0) {
-      throw doas::IOError("%s: %s", PATH_EDIT_LOCK, std::strerror(errno));
+      throw suex::IOError("%s: %s", PATH_EDIT_LOCK, std::strerror(errno));
     }
   }
 
   if (!auth::Authenticate(permissions.AuthService(), true)) {
-    throw doas::PermissionError("Incorrect password");
+    throw suex::PermissionError("Incorrect password");
   }
 
   utils::path::Touch(PATH_EDIT_LOCK);
   Permissions::SecureFile(PATH_EDIT_LOCK);
 
-  std::string tmpconf{"/tmp/doas.tmp"};
+  std::string tmpconf{"/tmp/suex.tmp"};
   utils::path::Touch(tmpconf);
   Permissions::SecureFile(tmpconf);
 
   DEFER({
     if (remove(PATH_EDIT_LOCK) != 0) {
-      throw doas::IOError("%s: %s", PATH_EDIT_LOCK, std::strerror(errno));
+      throw suex::IOError("%s: %s", PATH_EDIT_LOCK, std::strerror(errno));
     }
 
     if (utils::path::Exists(tmpconf) && remove(tmpconf.c_str()) != 0) {
-      throw doas::IOError("%s: %s", tmpconf.c_str(), std::strerror(errno));
+      throw suex::IOError("%s: %s", tmpconf.c_str(), std::strerror(errno));
     }
   });
 
@@ -140,7 +140,7 @@ void doas::EditConfiguration(const OptArgs &opts,
 
     // child process should run the editor
     if (pid == 0) {
-      doas::DoAs(User{0}, cmdargv.data(), doas::env::Raw());
+      suex::SwitchUserAndExecute(User{0}, cmdargv.data(), suex::env::Raw());
     }
 
     // parent process should wait until the child exists
@@ -168,14 +168,14 @@ void doas::EditConfiguration(const OptArgs &opts,
   }
 }
 
-void doas::CheckConfiguration(const OptArgs &opts) {
+void suex::CheckConfiguration(const OptArgs &opts) {
   if (opts.CommandArguments() == nullptr) {
     if (!Permissions::Validate(opts.ConfigPath(), opts.AuthService())) {
-      throw doas::ConfigError("configuration is not valid");
+      throw suex::ConfigError("configuration is not valid");
     }
 
     if (!Permissions::IsFileSecure(opts.ConfigPath())) {
-      throw doas::ConfigError("configuration is not valid");
+      throw suex::ConfigError("configuration is not valid");
     }
   }
   Permissions perms{opts.ConfigPath(), opts.AuthService()};
