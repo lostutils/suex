@@ -3,4 +3,5 @@ cd $ROOTDIR
 
 for f in $ROOTDIR/{src,include}/*.{h,cpp,hpp}
    clang-format -i $f
+   cpplint --filter=-legal/copyright $f
 end

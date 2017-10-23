@@ -13,4 +13,4 @@ bool Authenticate(const std::string &service_name, bool prompt,
                   const std::string &cache_token = "");
 
 bool PolicyExists(const std::string &service_name);
-}
+}  // namespace suex::auth

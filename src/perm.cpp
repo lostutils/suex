@@ -83,7 +83,7 @@ User::User(uid_t uid) : uid_{-1} {
   shell_ = pw->pw_shell;
 }
 
-User::User(const std::string &user) : name_ {user}, uid_{-1} {
+User::User(const std::string &user) : name_{user}, uid_{-1} {
   // try to extract the password struct
   // if the user is empty, use the current user,
   // otherwise try to take the one that was passed.

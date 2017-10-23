@@ -103,7 +103,7 @@ int Do(Permissions &permissions, const OptArgs &opts) {
   }
 
   if (opts.ShowPermissions()) {
-    ShowPermissions(permissions);
+    ShowPermissions(&permissions);
     return 0;
   }
 

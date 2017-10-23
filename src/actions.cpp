@@ -12,12 +12,12 @@ using suex::optargs::OptArgs;
 
 #define PATH_EDIT_LOCK PATH_VAR_RUN "/suex/edit.lock"
 
-void suex::ShowPermissions(permissions::Permissions &permissions) {
-  if (permissions.Privileged()) {
-    permissions.Reload(false);
+void suex::ShowPermissions(permissions::Permissions *permissions) {
+  if (permissions->Privileged()) {
+    permissions->Reload(false);
   }
 
-  for (const permissions::Entity &e : permissions) {
+  for (const permissions::Entity &e : *permissions) {
     std::cout << e << std::endl;
   }
 }

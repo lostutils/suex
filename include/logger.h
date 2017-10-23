@@ -5,8 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <ostream>
-
-using namespace suex;
+#include <string>
 
 namespace suex::logger {
 
@@ -47,4 +46,4 @@ Logger &info();
 Logger &warning();
 
 Logger &error();
-};
+};  // namespace suex::logger

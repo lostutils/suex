@@ -5,6 +5,7 @@
 #include <utils.h>
 #include <regex>
 #include <string>
+#include <vector>
 
 namespace suex::permissions {
 
@@ -48,14 +49,14 @@ class Permissions {
 
   const Entity *Get(const User &user, char *const *cmdargv) const;
 
-  unsigned long Size() const { return perms_.size(); };
+  int64_t Size() const { return perms_.size(); }
 
   static void SecureFile(const std::string &path);
 
   static bool IsFileSecure(const std::string &path);
 
-  const_iterator begin() const { return perms_.cbegin(); };
+  const_iterator begin() const { return perms_.cbegin(); }
 
-  const_iterator end() const { return perms_.cend(); };
+  const_iterator end() const { return perms_.cend(); }
 };
-}
+}  // namespace suex::permissions

@@ -1,11 +1,12 @@
 #pragma once
 
-#include <functional>
-
 #include <env.h>
 #include <perm.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <string>
+
+#include <functional>
 #include <iostream>
 
 static const auto running_user = suex::permissions::User(getuid());
@@ -65,4 +66,4 @@ std::string StringFormat(const std::string &format, Args &&... args) {
   // We don't want the '\0' inside
   return std::string(buf.get(), buf.get() + size - 1);
 }
-}
+}  // namespace suex::utils

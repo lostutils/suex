@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <conf.h>
@@ -13,7 +12,7 @@ void ClearAuthTokens(const permissions::Permissions &permissions);
 
 void ShowVersion();
 
-void ShowPermissions(permissions::Permissions &permissions);
+void ShowPermissions(permissions::Permissions *permissions);
 
 void EditConfiguration(const optargs::OptArgs &opts,
                        const permissions::Permissions &permissions);
@@ -25,4 +24,4 @@ const permissions::Entity *Permit(const permissions::Permissions &permissions,
 
 void SwitchUserAndExecute(const permissions::User &user, char *const *cmdargv,
                           char *const *envp);
-}
+}  // namespace suex
