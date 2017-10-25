@@ -1,7 +1,0 @@
-- Add more comments
-- Create a PPA
-- Create A Copr
-- Write system tests
-- Add CONTRIBUTING
-- Add more comments
-- Add auditing

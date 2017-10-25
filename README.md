@@ -41,35 +41,52 @@ To achieve these goals, the following design decisions were made:
 
 ## Getting started
 
-You can find pre-compiled `.deb` and `.rpm` packages in the [releases page](https://github.com/odedlaz/suex/releases).
+pre-compiled `.deb` and `.rpm` packages are [uploaded on each release](https://github.com/odedlaz/suex/releases).
 
-**[!]** [Ubuntu PPA](https://help.ubuntu.com/community/PPA) & [Fedora Copr](https://docs.pagure.org/copr.copr/)  are coming soon.
+## Fedora
 
-### Building from source
+The project is currently available in a [Copr](https://copr.fedorainfracloud.org/coprs/odedlaz/suex):
+```bash
+$ sudo dnf copr enable odedlaz/suex
+$ sudo dnf install -y suex
+```
 
-#### Fedora
-
+You can also build it from source:
 ```bash
 $ git clone https://github.com/odedlaz/suex.git
 $ sudo dnf install -y cmake pam-devel elfutils-devel rubygem-ronn gcc-c++
 $ mkdir -p suex/build && cd suex/build && cmake .. && cd ..
 ```
 
-#### Ubuntu
+## Ubuntu
 
+The project has a pre-compiled `deb` available at the [release page](https://github.com/odedlaz/suex/releases).
+
+You can also build it from source:
 ```bash
 $ git clone https://github.com/odedlaz/suex.git
 $ sudo apt install -y cmake libpam-dev libdw-dev ruby-ronn g++ rpm
 $ mkdir -p suex/build && cd suex/build && cmake .. && cd ..
 ```
 
-**[!]** If you're familiar with [direnv](https://oded.blog/2016/12/29/direnv/) and use  [fish shell](https://fishshell.com/) you'll enjoy a pre-baked environment.
+**[!]** A [PPA](https://help.ubuntu.com/community/PPA) is coming soon.
+
+## Arch
+
+**[!]** coming soon...
 
 ## Project Status
 
-Version `0.2.2` is out and has complete feature parity with the OpenBSD's `doas`.  
-Note that some featues work a bit differently, read the docs to see changes.
+The project *is in beta* and will be until it reaches the `1.0` milestone.  
+I don't expect any major features to be added until then.
 
+In order to reach 1.0 the project must:
+
+1. get a good-enough unit & system test coverage.
+2. pass a professional security audit.
+3. have a continuous test & integration pipeline.
+4. be available on major *client* distributions, i.e: Ubuntu, Fedora, Arch
+5. have both an faq & examples page that have quality enough content in them
 
 ## Authors
 
@@ -77,105 +94,8 @@ The main author is [Oded Lazar](https://oded.blog/whoami/)
 
 ## Contributions
 
-I gladly accept contributions via GitHub pull requests. 
+I gladly accept contributions via GitHub pull requests.
 
-If you are interested in contributing but not sure where to start, feel free to contact me.
+If you are interested in contributing but not sure where to start, feel free [to contact me](https://twitter.com/odedlaz).
 
-Once I feel this method is not effective anymore, I'll probably create a slack channel or IRC channel.
-
-## Changes compared to the original
-
-### Security checks
-
-#### Owenership & Permissions
-`doas` doesn't check the owners & permissions of the binary and configuration file.
-`sudo` checks those, but only warns the user.
-
-This version ensures the binary and configuration file are owned by `root:root`.  
-It also ensures the binary has [setuid](https://en.wikipedia.org/wiki/Setuid), and that the configuration file has only read permissions.
-
-Furthermore, only full paths of commands are allowed in the configuration file.  
-The idea is that privileged users (i.e: members of the *wheel* group) need to explicitly set the rule instead of depending on the running user's path.
-
-#### Rule Creation
-
-`doas` allows users to ommit the `as` and `cmd` keywords.  
-if `as` is not specified, `root` is used.
-if `cmd` is not specified, the command works on all binaries.
-if `args` is empty, the command doesn't match for processes with arguments.
-
-`suex` works a bit differently:
-- `as` and `cmd` are mandatory. You have to specify them.
-- `args` is not mandatory. if omitted, only the cmd matches.
-  if you want to match *any* args, use `args .*` instead.
-
-### Edit mode
-
-```bash
-suex -E
-```
-
-`suex` allows any privileged user (i.e: members of the *wheel* group) to edit the configuration file safely.
-Furthermore, if the configuration file is corrupted, privileged users can still access it and edit it.
-
-The edit option is similar to `visudo`, it creates a copy of the configuration and updates the real configuration only when the copy is valid.
-
-Non-privileged users are not allowed to edit the configuration.
-
-### Verbose mode
-
-```
-suex -V
-```
-
-`suex` allows to show logging information to privileged users. That information shows which rules are being loaded & how they are processed.  
-
-Non-privileged users are not allowed to turn on verbose mode.
-
-###  Dump mode
-
-```
-suex -D
-```
-
-`suex` allows the user to dump the permissions it loaded to screen.  
-group permissions and command globs are expanded into individual rules as well.
-
-privileged users see the permissions of all users instead of only their own.
-## Examples
-
-Ted Unagst's wrote a great blog post called [doas mastery](https://www.tedunangst.com/flak/post/doas-mastery). Because `suex` has *complete feature parity* with `doas`, the mentioned post should be a good starting point.
-
-Never the less, there are some powerful enhancments in this release that deserve special attention.
-
-
-### fine-grained package management
-
-```
-deny odedlaz as root cmd /usr/bin/dnf args (autoremove|update|upgrade).+
-permit keepenv nopass odedlaz as root cmd /usr/bin/dnf args (autoremove|update|upgrade)$
-```
-
-The first rule denies `odedlaz` of running `dnf` as `root` with any arguments that start with `autoremove`, `update` & `upgrade` and have other arguments as well.
-
-The second rule allows `odedlaz` to run `dnf` as `root` only with `autoremove`, `update`, `upgrade` and no other arguments.
-
-These protect `odedlaz` from  from accidentally running `dnf autoremove -y` or `dnf upgrade -y`, even if He's a privileged user (a member of the `wheel` group).
-
-On the other hand, it allows `odedlaz` to run these commands without a password (`nopass`) if they are executed without any trailing arguments.
-
-### rm -rf protection
-
-```
-deny odedlaz as root cmd /bin/rm args .*\s+/$
-```
-
-The above rule protects `odedlaz` from accidentally running `rm -rf /` and the like.
-
-### one rule, multiple executables
-
-```
-permit keepenv nopass odedlaz as root cmd /home/odedlaz/Development/suex/tools/* args .*
-```
-
-The above rule allows `odedlaz` to run any executable found at `/home/odedlaz/Development/suex/tools` with any arguments, as `root` without requiring a password.
+Once I feel this method is not effective anymore, I'll probably open a slack / irc channel.
