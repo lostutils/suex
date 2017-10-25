@@ -10,7 +10,7 @@ namespace suex::permissions {
 
 class User {
  public:
-  explicit User() = default;
+  User() = default;
 
   User(const User &user);
 
@@ -18,7 +18,7 @@ class User {
 
   explicit User(const std::string &user);
 
-  const std::string &Name() const { return name_; };
+  const std::string &Name() const { return name_; }
 
   bool operator==(const User &other) const;
 
@@ -32,13 +32,13 @@ class User {
 
   bool operator>=(const User &other) const;
 
-  const int Id() const { return uid_; };
+  const int Id() const { return uid_; }
 
-  int GroupId() const { return gid_; };
+  int GroupId() const { return gid_; }
 
-  const std::string &HomeDirectory() const { return home_dir_; };
+  const std::string &HomeDirectory() const { return home_dir_; }
 
-  const std::string &Shell() const { return shell_; };
+  const std::string &Shell() const { return shell_; }
 
   bool Exists() { return uid_ != -1; }
 
@@ -66,17 +66,17 @@ class Group {
 
   Group(const Group &grp);
 
-  const std::string &Name() const { return name_; };
+  const std::string &Name() const { return name_; }
 
   bool Contains(const User &user) const {
     return members_.find(user) != members_.end();
-  };
+  }
 
   const_iterator begin() const { return members_.begin(); }
 
   const_iterator end() const { return members_.end(); }
 
-  int Id() const { return gid_; };
+  int Id() const { return gid_; }
 
   bool Exists() { return gid_ != -1; }
 
@@ -127,15 +127,15 @@ class Entity {
         env_to_remove{},
         cmd_re_{cmd_re} {}
 
-  const User &Owner() const { return user_; };
+  const User &Owner() const { return user_; }
 
-  const User &AsUser() const { return as_user_; };
+  const User &AsUser() const { return as_user_; }
 
-  bool PromptForPassword() const { return !nopass_; };
+  bool PromptForPassword() const { return !nopass_; }
 
-  bool CacheAuth() const { return persist_; };
+  bool CacheAuth() const { return persist_; }
 
-  bool KeepEnvironment() const { return keepenv_; };
+  bool KeepEnvironment() const { return keepenv_; }
 
   bool EnvironmentVariablesConfigured() const {
     return !(env_to_add_.empty() && env_to_remove.empty());
@@ -151,11 +151,11 @@ class Entity {
     return env_to_remove.find(env) != env_to_remove.end();
   }
 
-  bool Deny() const { return deny_; };
+  bool Deny() const { return deny_; }
 
   bool CanExecute(const User &user, const std::string &cmd) const;
 
-  const std::string &Command() const { return cmd_re_txt_; };
+  const std::string &Command() const { return cmd_re_txt_; }
 
  private:
   User user_;
@@ -171,4 +171,4 @@ class Entity {
 };
 void Set(const User &user);
 std::ostream &operator<<(std::ostream &os, const Entity &entity);
-}
+}  // namespace suex::permissions

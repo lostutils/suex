@@ -4,6 +4,7 @@
 #include <utils.h>
 #include <iostream>
 #include <regex>
+#include <string>
 #include <vector>
 
 namespace suex::optargs {
@@ -51,4 +52,4 @@ class OptArgs {
   bool verbose_mode_{false};
   permissions::User user_{root_user};
 };
-}
+}  // namespace suex::optargs

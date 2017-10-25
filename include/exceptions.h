@@ -1,6 +1,7 @@
 #pragma once
 #include <utils.h>
 #include <stdexcept>
+#include <string>
 
 using suex::utils::StringFormat;
 
@@ -17,7 +18,7 @@ class SuExError : public std::runtime_error {
 
 class InvalidUsage : public SuExError {
  public:
-  explicit InvalidUsage() : SuExError("") {}
+  InvalidUsage() : SuExError("") {}
 };
 
 class PermissionError : public SuExError {
@@ -51,4 +52,4 @@ class ConfigError : public SuExError {
   explicit ConfigError(const std::string &format, Args &&... args)
       : SuExError(format, std::forward<Args>(args)...) {}
 };
-}
+}  // namespace suex
