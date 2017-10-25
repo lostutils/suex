@@ -1,4 +1,6 @@
 srpm:
 	dnf -y install cmake pam-devel elfutils-devel rubygem-ronn gcc-c++
-	mkdir -p build && cd build && cmake .. && make package && cd ..
-	mv -vf pkg/* ${outdir}
+	mkdir -vp build ${out_dir} && \
+		cd build && \
+		cmake -D CPACK_OUTPUT_DIR=${outdir} .. \
+		&& make package
