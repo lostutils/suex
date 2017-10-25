@@ -47,4 +47,5 @@ man/*.html
 
 # tools
 .direnv
-pkg/
+pkg/*
+!pkg/*.spec
