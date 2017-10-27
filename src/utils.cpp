@@ -18,23 +18,6 @@ std::string utils::CommandArgsText(char *const *cmdargv) {
   return ss.str();
 }
 
-void utils::ValidateBinaryOwnership(const std::string &path) {
-  struct stat fstat {};
-  if (stat(path::Locate(path).c_str(), &fstat) != 0) {
-    throw suex::PermissionError("couldn't locate suex binary");
-  }
-
-  if ((fstat.st_mode & S_ISUID) == 0) {
-    throw suex::PermissionError(
-        "set user ID upon execution (suid) access not granted for '%s'",
-        path.c_str());
-  }
-
-  if (fstat.st_uid != 0 || fstat.st_gid != 0) {
-    throw suex::PermissionError("suex owner should be 'root:root'");
-  }
-}
-
 bool utils::BypassPermissions(const User &as_user) {
   // if the user / grp is root, just let them run.
   if (running_user.Id() == 0 && running_user.GroupId() == 0) {

@@ -41,8 +41,6 @@ class ScopeGuard {
 namespace suex::utils {
 std::string CommandArgsText(char *const *cmdargv);
 
-void ValidateBinaryOwnership(const std::string &path);
-
 bool BypassPermissions(const suex::permissions::User &as_user);
 
 const std::string Iso8601();

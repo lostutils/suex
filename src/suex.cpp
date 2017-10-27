@@ -12,12 +12,12 @@ using namespace suex::permissions;
 
 void ShowUsage() {
   std::cout << "usage: suex [-LEVDvns] [-a style] [-C config] [-u user] "
-               "command [args]"
+      "command [args]"
             << std::endl;
 }
 
 void CreateRunDirectory() {
-  struct stat fstat {};
+  struct stat fstat{};
   if (stat(PATH_VAR_RUN, &fstat) != 0) {
     throw suex::IOError(std::strerror(errno));
   }
@@ -52,9 +52,9 @@ char *const *GetEnv(std::vector<char *> &vec, const Permissions &permissions,
   auto perm = Permit(permissions, opts);
   if (!perm->KeepEnvironment()) {
     envp = new char *[9]{
-        env::GetRaw("DISPLAY"), env::GetRaw("HOME"),     env::GetRaw("LOGNAME"),
-        env::GetRaw("MAIL"),    env::GetRaw("PATH"),     env::GetRaw("TERM"),
-        env::GetRaw("USER"),    env::GetRaw("USERNAME"), nullptr};
+        env::GetRaw("DISPLAY"), env::GetRaw("HOME"), env::GetRaw("LOGNAME"),
+        env::GetRaw("MAIL"), env::GetRaw("PATH"), env::GetRaw("TERM"),
+        env::GetRaw("USER"), env::GetRaw("USERNAME"), nullptr};
   }
 
   if (!perm->EnvironmentVariablesConfigured()) {
@@ -99,7 +99,7 @@ int Do(Permissions &permissions, const OptArgs &opts) {
   if ((!permissions.Size()) > 0) {
     throw suex::PermissionError(
         "suex.conf is either invalid or empty.\n! notice that you're not a "
-        "member of 'wheel'");
+            "member of 'wheel'");
   }
 
   if (opts.ShowPermissions()) {
@@ -136,19 +136,23 @@ int Do(Permissions &permissions, const OptArgs &opts) {
 
 int main(int argc, char *argv[]) {
   try {
-    ValidateBinaryOwnership(*argv);
-    CreateRunDirectory();
+    if (static_cast<int>(geteuid()) !=root_user.Id()
+        || static_cast<int>(getegid()) != root_user.GroupId()) {
+      throw suex::PermissionError("suex effective uid & effective gid should be 0",
+                                  geteuid(),
+                                  getegid());
+    }
 
     OptArgs opts{argc, argv};
     Permissions permissions{PATH_CONFIG, opts.AuthService()};
 
+    CreateRunDirectory();
     return Do(permissions, opts);
   } catch (InvalidUsage &) {
     ShowUsage();
     return 1;
   } catch (SuExError &e) {
     std::cerr << e.what() << std::endl;
-
     return 1;
   }
 }
