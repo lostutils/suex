@@ -75,10 +75,6 @@ The following quoting rules apply:
   * `/etc/suex.conf`:
    SuEx configuration file.
 
-## EAMPLES
-
-...
-
 ## SEE ALSO
 
 su(1), suex.conf(5), pam(5), pam.d(5), glob(3)

@@ -50,22 +50,22 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
   int c;
   argc = GetArgumentCount(argc, argv);
   while (true) {
-    c = getopt(argc, argv, "a:C:EVDvLnsu:");
+    c = getopt(argc, argv, "a:C:EVlvznsu:");
     if (c == -1) {
       return optind;
     }
     /* Detect the end of the options. */
     switch (c) {
       case 'a': {
-        pam_service_ = optarg;
+        auth_style_ = optarg;
         break;
       }
-      case 'D': {
-        show_perms_ = true;
+      case 'l': {
+        list_ = true;
         break;
       }
-      case 'L': {
-        clear_auth_tokens_ = true;
+      case 'z': {
+        clear_ = true;
         break;
       }
       case 'n': {

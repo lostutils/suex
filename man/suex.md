@@ -3,7 +3,7 @@ SUEX(1) -- execute commands as another user
 
 ## SYNOPSIS
 
-`suex` \[`-Lns`] \[`-a` *style*] \[`-C` *config*] \[`-u` *user*] *command* \[*args*]
+`suex` \[`-EVlvzns`] \[`-a` *style*] \[`-C` *config*] \[`-u` *user*] *command* \[*args*]
 
 ## DESCRIPTION
 
@@ -12,6 +12,29 @@ The command argument is mandatory unless `-C`, `-L`, or `-s` is specified.
 
 The options are as follows:
 
+  * `-E`:
+    Edit */etc/suex.conf*, fail if user is not a member of the *wheel* group.
+
+  * `-V`:
+    Turn on verbose output, fail if user is not a member of the *wheel* group.
+
+  * `-l`:
+    List loaded permissions. Will print all permissions, unless user is not
+    a member of the *wheel* group. In that case, will only print the user's permissions.
+
+  * `-v`:
+    Show version and exit.
+
+  * `-z`:
+    Clear any persisted authorizations from previous invocations in this session, then immediately exit. No command is executed.
+    Also clears edit locks when combined with `-E'.
+
+  * `-n`:
+    Non interactive mode, fail if **suex** would prompt for password.
+
+  * `-s`:
+    Execute the shell from *SHELL* or */etc/passwd*.
+    
   * `-a` *style*:
     Use the specified PAM configuration file when validating the user. These can be found in **pam.d(5)**.
 
@@ -21,31 +44,9 @@ The options are as follows:
     ‘permit’, ‘permit nopass’ or ‘deny’ will be printed on standard output,
     depending on command matching results. No command is executed.
 
-  * `-L`:
-    Clear any persisted authorizations from previous invocations, then immediately exit. No command is executed.
-
-  * `-n`:
-    Non interactive mode, fail if **suex** would prompt for password.
-
   * `-u` *user*:
     Execute the command as user. The default is root.
-
-  * `-E`:
-    Edit */etc/suex.conf*, fail if user is not a member of the *wheel* group.
-
-  * `-D`:
-    Print loaded permissions. Will print all permissions, unless user is not
-    a member of the *wheel* group. In that case, will only print the user's permissions.
-
-  * `-s`:
-    Execute the shell from *SHELL* or */etc/passwd*.
-
-  * `-V`:
-    Turn on verbose output, fail if user is not a member of the *wheel* group.
-
-  * `-v`:
-    Show version and exit.
-
+    
 ## EXIT STATUS
 
 The `suex` utility exits 0 on success, and > 0 if an error occurs.  

@@ -38,7 +38,7 @@ const permissions::Entity *suex::Permit(const Permissions &perms,
 
   if (perm->PromptForPassword()) {
     std::string cache_token{perm->CacheAuth() ? perm->Command() : ""};
-    if (!auth::Authenticate(perms.AuthService(), opts.Interactive(),
+    if (!auth::Authenticate(perms.AuthStyle(), opts.Interactive(),
                             cache_token)) {
       throw suex::PermissionError("Incorrect password");
     }
@@ -75,7 +75,7 @@ void suex::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
 }
 
 void suex::ClearAuthTokens(const Permissions &permissions) {
-  int cleared = auth::ClearTokens(permissions.AuthService());
+  int cleared = auth::ClearTokens(permissions.AuthStyle());
   if (cleared < 0) {
     throw std::runtime_error("error while clearing tokens");
   }
@@ -102,7 +102,7 @@ void suex::EditConfiguration(const OptArgs &opts,
     throw suex::PermissionError("suex.conf is being edited from another session");
   }
 
-  if (!auth::Authenticate(permissions.AuthService(), true)) {
+  if (!auth::Authenticate(permissions.AuthStyle(), true)) {
     throw suex::PermissionError("Incorrect password");
   }
 
@@ -138,7 +138,7 @@ void suex::EditConfiguration(const OptArgs &opts,
     }
 
     // update the file permissions after editing it
-    if (Permissions::Validate(PATH_CONFIG_TMP, opts.AuthService())) {
+    if (Permissions::Validate(PATH_CONFIG_TMP, opts.AuthStyle())) {
 
       file::Clone(PATH_CONFIG_TMP, PATH_CONFIG, true);
       std::cout << PATH_CONFIG << " changes applied." << std::endl;
@@ -156,7 +156,7 @@ void suex::EditConfiguration(const OptArgs &opts,
 
 void suex::CheckConfiguration(const OptArgs &opts) {
   if (opts.CommandArguments() == nullptr) {
-    if (!Permissions::Validate(opts.ConfigPath(), opts.AuthService())) {
+    if (!Permissions::Validate(opts.ConfigPath(), opts.AuthStyle())) {
       throw suex::ConfigError("configuration is not valid");
     }
 
@@ -169,7 +169,7 @@ void suex::CheckConfiguration(const OptArgs &opts) {
     return;
   }
 
-  Permissions perms{opts.ConfigPath(), opts.AuthService()};
+  Permissions perms{opts.ConfigPath(), opts.AuthStyle()};
 
   auto perm = perms.Get(opts.AsUser(), opts.CommandArguments());
   if (perm == nullptr || perm->Deny()) {

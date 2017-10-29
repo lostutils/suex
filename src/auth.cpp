@@ -16,22 +16,22 @@ struct auth_data {
   bool prompt;
 };
 
-std::string GetTokenPrefix(const std::string &service_name) {
-  std::string text{service_name + "__" + running_user.Name()};
+std::string GetTokenPrefix(const std::string &style) {
+  std::string text{style + "__" + running_user.Name()};
   return std::to_string(std::hash<std::string>{}(text));
 }
 
-std::string GetTokenName(const std::string &service_name,
+std::string GetTokenName(const std::string &style,
                          const std::string &cache_token) {
-  std::string prefix{GetTokenPrefix(service_name)};
+  std::string prefix{GetTokenPrefix(style)};
   std::string suffix{std::to_string(std::hash<std::string>{}(cache_token))};
   return prefix + suffix;
 }
 
-std::string GetFilepath(const std::string &service_name,
+std::string GetFilepath(const std::string &style,
                         const std::string &cache_token) {
   std::stringstream ss;
-  ss << PATH_SUEX_TMP << "/" << GetTokenName(service_name, cache_token)
+  ss << PATH_SUEX_TMP << "/" << GetTokenName(style, cache_token)
      << getsid(0);
   return ss.str();
 }
@@ -90,10 +90,10 @@ int PamConversation(int, const struct pam_message **,
   return PAM_SUCCESS;
 }
 
-int auth::ClearTokens(const std::string &service_name) {
+int auth::ClearTokens(const std::string &style) {
   glob_t globbuf{};
   std::string glob_pattern{StringFormat("%s/%s*", PATH_SUEX_TMP,
-                                        GetTokenPrefix(service_name).c_str())};
+                                        GetTokenPrefix(style).c_str())};
   int retval = glob(glob_pattern.c_str(), 0, nullptr, &globbuf);
   if (retval != 0) {
     logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval
@@ -116,27 +116,27 @@ int auth::ClearTokens(const std::string &service_name) {
   return static_cast<int>(globbuf.gl_pathc);
 }
 
-bool auth::PolicyExists(const std::string &service_name) {
+bool auth::StyleExists(const std::string &style) {
   std::string policy_path{
-      StringFormat("%s/%s", PATH_PAM_POlICY, service_name.c_str())};
+      StringFormat("%s/%s", PATH_PAM_POlICY, style.c_str())};
   return path::Exists(policy_path);
 }
 
-bool auth::Authenticate(const std::string &service_name, bool prompt,
+bool auth::Authenticate(const std::string &style, bool prompt,
                         const std::string &cache_token) {
   logger::debug() << "Authenticating | "
-                  << "policy: " << service_name << " | "
+                  << "auth style: " << style << " | "
                   << "cache: "
                   << (cache_token.empty() ? "off" : "on") << " | "
                   << "prompt: "
                   << (prompt ? "on" : "off") << std::endl;
 
-  if (!PolicyExists(service_name)) {
+  if (!StyleExists(style)) {
     throw suex::AuthError("Invalid PAM policy: policy '%s' doesn't exist",
-                          service_name.c_str());
+                          style.c_str());
   }
 
-  std::string ts_filename{GetFilepath(service_name, cache_token)};
+  std::string ts_filename{GetFilepath(style, cache_token)};
 
   if (!cache_token.empty()) {
     // check timestamp validity
@@ -160,7 +160,7 @@ bool auth::Authenticate(const std::string &service_name, bool prompt,
   const struct pam_conv pam_conversation = {PamConversation, &data};
   pam_handle_t *handle = nullptr;  // this gets set by pam_start
 
-  int retval = pam_start(service_name.c_str(), running_user.Name().c_str(),
+  int retval = pam_start(style.c_str(), running_user.Name().c_str(),
                          &pam_conversation, &handle);
 
   if (retval != PAM_SUCCESS) {

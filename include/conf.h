@@ -30,20 +30,20 @@ class Permissions {
  private:
   typedef std::vector<Entity> Collection;
   std::string path_;
-  std::string auth_service_;
+  std::string auth_style_;
   std::vector<Entity> perms_{};
   void Parse(int lineno, const std::string &line, bool only_user);
 
  public:
   typedef Collection::const_iterator const_iterator;
 
-  explicit Permissions(const std::string &path, const std::string &auth_service,
+  explicit Permissions(const std::string &path, const std::string &auth_style,
                        bool only_user = true);
 
   static bool Validate(const std::string &path,
-                       const std::string &auth_service);
+                       const std::string &auth_style);
 
-  std::string AuthService() const { return auth_service_; }
+  std::string AuthStyle() const { return auth_style_; }
 
   bool Privileged() const {
     return wheel_group.Contains(running_user) || running_user == root_user;
