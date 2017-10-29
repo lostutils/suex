@@ -1,8 +1,8 @@
 #include <conf.h>
 #include <exceptions.h>
+#include <file.h>
 #include <glob.h>
 #include <logger.h>
-#include <file.h>
 
 using namespace suex;
 using namespace suex::utils;
@@ -65,7 +65,7 @@ std::vector<User> &GetUsers(const std::string &user, std::vector<User> &users) {
 }
 
 bool IsExecutable(const std::string &path) {
-  struct stat st{};
+  struct stat st {};
   if (stat(path.c_str(), &st) < 0) {
     throw suex::IOError("couldn't get executable stat");
   }
@@ -221,14 +221,18 @@ bool Permissions::Validate(const std::string &path,
   return perms.Size() > 0;
 }
 
-Permissions::Permissions(const std::string &path,
-                         const std::string &auth_style, bool only_user)
+Permissions::Permissions(const std::string &path, const std::string &auth_style,
+                         bool only_user)
     : path_{path}, auth_style_{auth_style} {
 
+  // only secure the main file
+  bool secure{PATH_CONFIG == path};
+
   if (!path::Exists(path)) {
-    // only secure the main file
-    bool secure{PATH_CONFIG == path};
     file::Create(path, secure);
+  }
+  if (secure && !file::IsSecure(path_)) {
+    throw suex::PermissionError("'%s' is not secure", path_.c_str());
   }
 
   Reload(only_user);
@@ -238,7 +242,6 @@ bool GetLine(std::ifstream &ifs, std::string &line) {
   std::stringstream ss;
   char buff{'\0'};
   while (!ifs.eof() && ss.tellp() < MAX_LINE) {
-
     ifs.read(&buff, 1);
     if (buff == '\n') {
       break;
@@ -258,14 +261,13 @@ bool GetLine(std::ifstream &ifs, std::string &line) {
 
 void Permissions::Reload(bool only_user) {
   if (file::Size(path_) > MAX_FILESIZE) {
-    throw suex::PermissionError("'%s' size is %ld, which is not supported.",
-                                path_.c_str(),
-                                file::Size(path_));
+    throw suex::PermissionError("'%s' size is %ld, which is not supported",
+                                path_.c_str(), file::Size(path_));
   }
 
-  // clear permissions
   perms_.clear();
-  std::ifstream ifs{PATH_CONFIG};
+
+  std::ifstream ifs{path_};
   std::string line;
   for (int lineno = 1; GetLine(ifs, line); lineno++) {
     try {
@@ -284,6 +286,4 @@ void Permissions::Reload(bool only_user) {
                                  true, ".+");
     perms_.emplace(perms_.begin(), p);
   }
-
 }
-
