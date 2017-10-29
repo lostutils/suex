@@ -8,6 +8,9 @@
 
 namespace suex::permissions {
 
+#define MAX_LINE 65535
+#define MAX_FILESIZE 8192
+
 static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
 
 static auto line_re_ = std::regex(
@@ -20,6 +23,8 @@ static auto empty_re_ = std::regex(R"(^[\t|\s]*)");
 // match ' or " but not \' and \"
 // if that looks weird, a full explanation in the cpp file
 static auto quote_re_ = std::regex(R"(('|")(?!\\))");
+
+
 
 class Permissions {
  private:
@@ -49,10 +54,6 @@ class Permissions {
   const Entity *Get(const User &user, char *const *cmdargv) const;
 
   unsigned long Size() const { return perms_.size(); };
-
-  static void SecureFile(const std::string &path);
-
-  static bool IsFileSecure(const std::string &path);
 
   const_iterator begin() const { return perms_.cbegin(); };
 

@@ -2,6 +2,9 @@
 #include <exceptions.h>
 #include <glob.h>
 #include <logger.h>
+#include <fcntl.h>
+#include <sys/sendfile.h>
+#include <file.h>
 
 using namespace suex;
 using namespace suex::utils;
@@ -48,27 +51,6 @@ void ProcessEnv(const std::string &txt, Entity::HashTable &upsert,
   }
 }
 
-bool Permissions::IsFileSecure(const std::string &path) {
-  struct stat fstat {};
-
-  if (stat(path.c_str(), &fstat) != 0) {
-    throw suex::IOError(std::strerror(errno));
-  }
-
-  // config file can only have read permissions for user and group
-  if (utils::PermissionBits(fstat) != 440) {
-    logger::error() << "invalid suex.conf permission bits" << std::endl;
-    return false;
-  }
-
-  // config file has to be owned by root:root
-  if (fstat.st_uid != 0 || fstat.st_gid != 0) {
-    logger::error() << "invalid file owner: " << User(fstat.st_uid).Name()
-                    << ":" << Group(fstat.st_gid).Name();
-    return false;
-  }
-  return true;
-}
 std::vector<User> &GetUsers(const std::string &user, std::vector<User> &users) {
   if (user[0] == ':') {
     Group grp{user.substr(1, user.npos)};
@@ -85,7 +67,7 @@ std::vector<User> &GetUsers(const std::string &user, std::vector<User> &users) {
 }
 
 bool IsExecutable(const std::string &path) {
-  struct stat st {};
+  struct stat st{};
   if (stat(path.c_str(), &st) < 0) {
     throw suex::IOError("couldn't get executable stat");
   }
@@ -241,52 +223,53 @@ bool Permissions::Validate(const std::string &path,
   return perms.Size() > 0;
 }
 
-void Permissions::SecureFile(const std::string &path) {
-  // chmod 440
-  if (chmod(path.c_str(), S_IRUSR | S_IRGRP) < 0) {
-    throw suex::PermissionError(std::strerror(errno));
-  }
-
-  // chown root:root
-  if (chown(path.c_str(), 0, 0) < 0) {
-    throw suex::PermissionError(std::strerror(errno));
-  }
-}
-
 Permissions::Permissions(const std::string &path,
                          const std::string &auth_service, bool only_user)
     : path_{path}, auth_service_{auth_service} {
-  if (path_ == PATH_CONFIG) {
-    if (!path::Exists(path_)) {
-      std::fstream fs;
-      fs.open(path_, std::ios::out);
-      DEFER(fs.close());
-      fs << "# Welcome to suex!";
-      Permissions::SecureFile(path_);
-    }
 
-    if (!Permissions::IsFileSecure(path_)) {
-      throw suex::PermissionError("suex.conf has invalid permissions");
-    }
+  if (!path::Exists(path)) {
+    // only secure the main file
+    bool secure {PATH_CONFIG == path};
+    file::Create(path, secure);
   }
 
   Reload(only_user);
 }
 
-void Permissions::Reload(bool only_user) {
-  perms_.clear();
+bool GetLine(std::ifstream &ifs, std::string &line) {
+  std::stringstream ss;
+  char buff{'\0'};
+  while (!ifs.eof() && ss.tellp() < MAX_LINE) {
 
-  if (Privileged()) {
-    auto p = permissions::Entity(running_user, root_user, false, true, false,
-                                 true, ".+");
-    perms_.emplace(perms_.begin(), p);
+    ifs.read(&buff, 1);
+    if (buff == '\n') {
+      break;
+    }
+
+    ss << buff;
   }
 
-  // parse each line in the configuration file
-  std::ifstream f(path_);
-  DEFER(f.close());
+  if (ss.tellp() >= MAX_LINE) {
+    throw ConfigError("line is too long and will not be parsed");
+  }
+
+  line = ss.str();
+
+  return !ifs.eof();
+}
+
+void Permissions::Reload(bool only_user) {
+  if (file::Size(path_) > MAX_FILESIZE) {
+    throw suex::PermissionError("'%s' size is %ld, which is not supported.",
+                                path_.c_str(),
+                                file::Size(path_));
+  }
+
+  // clear permissions
+  perms_.clear();
+  std::ifstream ifs{PATH_CONFIG};
   std::string line;
-  for (int lineno = 1; std::getline(f, line); lineno++) {
+  for (int lineno = 1; GetLine(ifs, line); lineno++) {
     try {
       Parse(lineno, line, only_user);
     } catch (std::exception &e) {
@@ -295,4 +278,14 @@ void Permissions::Reload(bool only_user) {
       return;
     }
   }
+
+  // if the user is privileged, add an "all rule" to the
+  // beginning of the permissions vector
+  if (Privileged()) {
+    auto p = permissions::Entity(running_user, root_user, false, true, false,
+                                 true, ".+");
+    perms_.emplace(perms_.begin(), p);
+  }
+
 }
+
