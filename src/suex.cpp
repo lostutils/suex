@@ -11,7 +11,7 @@ using namespace suex::env;
 using namespace suex::permissions;
 
 void ShowUsage() {
-  std::cout << "usage: suex [-LEVDvns] [-a style] [-C config] [-u user] "
+  std::cout << "usage: suex [-LEVzvns] [-a style] [-C config] [-u user] "
       "command [args]"
             << std::endl;
 }
@@ -91,7 +91,7 @@ int Do(Permissions &permissions, const OptArgs &opts) {
 
   if (opts.EditConfig()) {
 
-    if (opts.ClearAuthTokens()) {
+    if (opts.Clear()) {
       RemoveEditLock();
     }
 
@@ -107,7 +107,7 @@ int Do(Permissions &permissions, const OptArgs &opts) {
             "member of 'wheel'");
   }
 
-  if (opts.ShowPermissions()) {
+  if (opts.ListPermissions()) {
     ShowPermissions(permissions);
     return 0;
   }
@@ -117,7 +117,7 @@ int Do(Permissions &permissions, const OptArgs &opts) {
     return 0;
   }
 
-  if (opts.ClearAuthTokens()) {
+  if (opts.Clear()) {
     ClearAuthTokens(permissions);
     return 0;
   }
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
                                   getegid());
     }
     OptArgs opts{argc, argv};
-    Permissions permissions{PATH_CONFIG, opts.AuthService()};
+    Permissions permissions{PATH_CONFIG, opts.AuthStyle()};
     CreateRunDirectory();
     return Do(permissions, opts);
   } catch (InvalidUsage &) {

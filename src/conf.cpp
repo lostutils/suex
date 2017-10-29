@@ -216,14 +216,14 @@ const Entity *Permissions::Get(const permissions::User &user,
 }
 
 bool Permissions::Validate(const std::string &path,
-                           const std::string &auth_service) {
-  Permissions perms{path, auth_service, false};
+                           const std::string &auth_style) {
+  Permissions perms{path, auth_style, false};
   return perms.Size() > 0;
 }
 
 Permissions::Permissions(const std::string &path,
-                         const std::string &auth_service, bool only_user)
-    : path_{path}, auth_service_{auth_service} {
+                         const std::string &auth_style, bool only_user)
+    : path_{path}, auth_style_{auth_style} {
 
   if (!path::Exists(path)) {
     // only secure the main file

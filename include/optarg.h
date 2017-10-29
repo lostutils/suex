@@ -8,7 +8,7 @@
 
 namespace suex::optargs {
 #define PATH_CONFIG "/etc/suex.conf"
-#define DEFAULT_AUTH_SERVICE "su"
+#define DEFAULT_AUTH_STYLE "su"
 
 class OptArgs {
  public:
@@ -18,19 +18,19 @@ class OptArgs {
 
   const std::string &ConfigPath() const { return config_path_; }
 
-  const std::string &AuthService() const { return pam_service_; }
+  const std::string &AuthStyle() const { return auth_style_; }
 
   bool Interactive() const { return interactive_; }
 
   bool ShowVersion() const { return show_version_; }
 
-  bool ClearAuthTokens() const { return clear_auth_tokens_; }
+  bool Clear() const { return clear_; }
 
   bool EditConfig() const { return edit_config_; }
 
   bool VerboseMode() const { return verbose_mode_; }
 
-  bool ShowPermissions() const { return show_perms_; }
+  bool ListPermissions() const { return list_; }
 
   const permissions::User &AsUser() const { return user_; }
 
@@ -39,15 +39,15 @@ class OptArgs {
 
   int GetArgumentCount(int argc, char *argv[]);
 
-  std::string pam_service_{DEFAULT_AUTH_SERVICE};
+  std::string auth_style_{DEFAULT_AUTH_STYLE};
   std::vector<char *> args_{};
   std::string config_path_;
   std::string binary_;
   bool show_version_{false};
   bool edit_config_{false};
-  bool show_perms_{false};
+  bool list_{false};
   bool interactive_{true};
-  bool clear_auth_tokens_{false};
+  bool clear_{false};
   bool verbose_mode_{false};
   permissions::User user_{root_user};
 };
