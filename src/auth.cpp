@@ -4,7 +4,9 @@
 #include <logger.h>
 #include <optarg.h>
 #include <security/pam_misc.h>
-#include <cstring>
+#include <conf.h>
+#include <file.h>
+#include <ext/stdio_filebuf.h>
 
 using namespace suex;
 using namespace suex::optargs;
@@ -14,43 +16,42 @@ struct auth_data {
   bool prompt;
 };
 
-std::string GetTokenPrefix(const std::string &service_name) {
-  std::string text{service_name + "__" + running_user.Name()};
+std::string GetTokenPrefix(const std::string &style) {
+  std::string text{style + "__" + running_user.Name()};
   return std::to_string(std::hash<std::string>{}(text));
 }
 
-std::string GetTokenName(const std::string &service_name,
+std::string GetTokenName(const std::string &style,
                          const std::string &cache_token) {
-  std::string prefix{GetTokenPrefix(service_name)};
+  std::string prefix{GetTokenPrefix(style)};
   std::string suffix{std::to_string(std::hash<std::string>{}(cache_token))};
   return prefix + suffix;
 }
 
-std::string GetFilepath(const std::string &service_name,
+std::string GetFilepath(const std::string &style,
                         const std::string &cache_token) {
   std::stringstream ss;
-  ss << PATH_SUEX_TMP << "/" << GetTokenName(service_name, cache_token)
+  ss << PATH_SUEX_TMP << "/" << GetTokenName(style, cache_token)
      << getsid(0);
   return ss.str();
 }
 
 void SetToken(time_t ts, const std::string &filename) {
-  std::ofstream f(filename);
-  DEFER(f.close());
-  f << ts;
+  FILE *f = fopen(filename.c_str(), "w");
+  if (f == nullptr) {
+    throw suex::IOError("couldn't open token file for writing");
+  }
 
-  // chmod 440
-  if (chmod(filename.c_str(), S_IRUSR | S_IRGRP) < 0) {
-    throw suex::PermissionError(std::strerror(errno));
-  }
-  // chown root:root
-  if (chown(filename.c_str(), 0, 0) < 0) {
-    throw suex::PermissionError(std::strerror(errno));
-  }
+  DEFER(fclose(f));
+  file::Secure(fileno(f));
+
+  file::Buffer buff(fileno(f), std::ios::out);
+  std::ostream os(&buff);
+  os << ts;
 }
 
 time_t GetToken(const std::string &filename) {
-  struct stat fstat {};
+  struct stat fstat{};
 
   if (stat(filename.c_str(), &fstat) != 0) {
     SetToken(0, filename);
@@ -63,8 +64,7 @@ time_t GetToken(const std::string &filename) {
     throw suex::IOError("auth timestamp is not a file");
   }
 
-  if (fstat.st_uid != 0 || fstat.st_gid != 0 ||
-      utils::PermissionBits(fstat) != 440) {
+  if (!file::IsSecure(filename)) {
     throw suex::PermissionError("auth timestamp file has invalid permissions");
   }
 
@@ -77,7 +77,7 @@ time_t GetToken(const std::string &filename) {
 
 int PamConversation(int, const struct pam_message **,
                     struct pam_response **resp, void *appdata) {
-  auto auth_data = *(struct auth_data *)appdata;
+  auto auth_data = *(struct auth_data *) appdata;
   if (!auth_data.prompt) {
     return PAM_AUTH_ERR;
   }
@@ -90,10 +90,10 @@ int PamConversation(int, const struct pam_message **,
   return PAM_SUCCESS;
 }
 
-int auth::ClearTokens(const std::string &service_name) {
+int auth::ClearTokens(const std::string &style) {
   glob_t globbuf{};
   std::string glob_pattern{StringFormat("%s/%s*", PATH_SUEX_TMP,
-                                        GetTokenPrefix(service_name).c_str())};
+                                        GetTokenPrefix(style).c_str())};
   int retval = glob(glob_pattern.c_str(), 0, nullptr, &globbuf);
   if (retval != 0) {
     logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval
@@ -116,27 +116,27 @@ int auth::ClearTokens(const std::string &service_name) {
   return static_cast<int>(globbuf.gl_pathc);
 }
 
-bool auth::PolicyExists(const std::string &service_name) {
+bool auth::StyleExists(const std::string &style) {
   std::string policy_path{
-      StringFormat("%s/%s", PATH_PAM_POlICY, service_name.c_str())};
+      StringFormat("%s/%s", PATH_PAM_POlICY, style.c_str())};
   return path::Exists(policy_path);
 }
 
-bool auth::Authenticate(const std::string &service_name, bool prompt,
+bool auth::Authenticate(const std::string &style, bool prompt,
                         const std::string &cache_token) {
   logger::debug() << "Authenticating | "
-                  << "policy: " << service_name << " | "
-                                                   "cache: "
+                  << "auth style: " << style << " | "
+                  << "cache: "
                   << (cache_token.empty() ? "off" : "on") << " | "
-                                                             "prompt: "
+                  << "prompt: "
                   << (prompt ? "on" : "off") << std::endl;
 
-  if (!PolicyExists(service_name)) {
+  if (!StyleExists(style)) {
     throw suex::AuthError("Invalid PAM policy: policy '%s' doesn't exist",
-                          service_name.c_str());
+                          style.c_str());
   }
 
-  std::string ts_filename{GetFilepath(service_name, cache_token)};
+  std::string ts_filename{GetFilepath(style, cache_token)};
 
   if (!cache_token.empty()) {
     // check timestamp validity
@@ -160,7 +160,7 @@ bool auth::Authenticate(const std::string &service_name, bool prompt,
   const struct pam_conv pam_conversation = {PamConversation, &data};
   pam_handle_t *handle = nullptr;  // this gets set by pam_start
 
-  int retval = pam_start(service_name.c_str(), running_user.Name().c_str(),
+  int retval = pam_start(style.c_str(), running_user.Name().c_str(),
                          &pam_conversation, &handle);
 
   if (retval != PAM_SUCCESS) {
@@ -169,11 +169,11 @@ bool auth::Authenticate(const std::string &service_name, bool prompt,
   }
 
   DEFER({
-    retval = pam_end(handle, retval);
-    if (retval != PAM_SUCCESS) {
-      logger::debug() << "[pam]: pam_end returned " << retval << std::endl;
-    }
-  });
+          retval = pam_end(handle, retval);
+          if (retval != PAM_SUCCESS) {
+            logger::debug() << "[pam]: pam_end returned " << retval << std::endl;
+          }
+        });
 
   retval = pam_authenticate(handle, 0);
   if (retval != PAM_SUCCESS) {

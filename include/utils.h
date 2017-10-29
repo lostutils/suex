@@ -18,7 +18,7 @@ static const auto wheel_group = suex::permissions::Group("wheel");
 
 class ScopeGuard {
  public:
-  template <class Callable>
+  template<class Callable>
   ScopeGuard(Callable &&fn) : fn_(std::forward<Callable>(fn)) {}
 
   ScopeGuard(ScopeGuard &&other) : fn_(std::move(other.fn_)) {
@@ -47,17 +47,15 @@ const std::string Iso8601();
 
 const std::string ToString(char *txt);
 
-int PermissionBits(const struct stat &fstat);
-
 bool AskQuestion(const std::string &prompt);
 
 std::string GetEditor();
 
 // https://stackoverflow.com/a/26221725/4579708
-template <typename... Args>
+template<typename... Args>
 std::string StringFormat(const std::string &format, Args &&... args) {
   // Extra space for '\0'
-  size_t size = (size_t)snprintf(nullptr, 0, format.c_str(), args...) + 1;
+  size_t size = (size_t) snprintf(nullptr, 0, format.c_str(), args...) + 1;
   std::unique_ptr<char[]> buf(new char[size]);
   snprintf(buf.get(), size, format.c_str(), args...);
   // We don't want the '\0' inside

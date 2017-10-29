@@ -2,12 +2,7 @@
 #include <conf.h>
 #include <exceptions.h>
 #include <logger.h>
-#include <optarg.h>
-#include <path.h>
 #include <version.h>
-#include <cstring>
-#include <fstream>
-#include <sstream>
 
 using namespace suex;
 using namespace suex::utils;
@@ -20,9 +15,9 @@ OptArgs::OptArgs(int argc, char *argv[]) {
   }
   args_ = std::vector<char *>{argv + optind, argv + argc};
   // low level c code needs an indication when an array of pointers ends
-  args_.emplace_back((char *)nullptr);
+  args_.emplace_back((char *) nullptr);
   binary_ = path::Locate(args_.front());
-  args_.front() = (char *)binary_.c_str();
+  args_.front() = (char *) binary_.c_str();
 }
 
 int OptArgs::GetArgumentCount(int argc, char *argv[]) {
@@ -55,22 +50,22 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
   int c;
   argc = GetArgumentCount(argc, argv);
   while (true) {
-    c = getopt(argc, argv, "a:C:EVDvLnsu:");
+    c = getopt(argc, argv, "a:C:EVlvznsu:");
     if (c == -1) {
       return optind;
     }
     /* Detect the end of the options. */
     switch (c) {
       case 'a': {
-        pam_service_ = optarg;
+        auth_style_ = optarg;
         break;
       }
-      case 'D': {
-        show_perms_ = true;
+      case 'l': {
+        list_ = true;
         break;
       }
-      case 'L': {
-        clear_auth_tokens_ = true;
+      case 'z': {
+        clear_ = true;
         break;
       }
       case 'n': {
