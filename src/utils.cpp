@@ -1,7 +1,6 @@
 #include <exceptions.h>
 #include <logger.h>
 #include <optarg.h>
-#include <utils.h>
 #include <iomanip>
 
 using namespace suex;
@@ -27,7 +26,7 @@ bool utils::BypassPermissions(const User &as_user) {
   // if the user / grp are the same as the running user,
   // just run the app without performing any operations
   return running_user.Id() == as_user.Id() &&
-         running_user.GroupId() == as_user.GroupId();
+      running_user.GroupId() == as_user.GroupId();
 }
 
 const std::string utils::Iso8601() {
@@ -46,13 +45,6 @@ const std::string utils::ToString(char *txt) {
   return std::string(txt);
 }
 
-int utils::PermissionBits(const struct stat &fstat) {
-  // return permission bits in a "human readable" format
-  int user = (fstat.st_mode & S_IRWXU) >> 6;
-  int group = (fstat.st_mode & S_IRWXG) >> 3;
-  int others = fstat.st_mode & S_IRWXO;
-  return (user * 100) + (group * 10) + others;
-}
 std::string utils::GetEditor() {
   std::string editor{env::Get("EDITOR")};
 

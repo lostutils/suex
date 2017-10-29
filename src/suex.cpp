@@ -11,7 +11,7 @@ using namespace suex::env;
 using namespace suex::permissions;
 
 void ShowUsage() {
-  std::cout << "usage: suex [-LEVDvns] [-a style] [-C config] [-u user] "
+  std::cout << "usage: suex [-LEVzvns] [-a style] [-C config] [-u user] "
       "command [args]"
             << std::endl;
 }
@@ -90,6 +90,11 @@ int Do(Permissions &permissions, const OptArgs &opts) {
   }
 
   if (opts.EditConfig()) {
+
+    if (opts.Clear()) {
+      RemoveEditLock();
+    }
+
     EditConfiguration(opts, permissions);
     return 0;
   }
@@ -102,7 +107,7 @@ int Do(Permissions &permissions, const OptArgs &opts) {
             "member of 'wheel'");
   }
 
-  if (opts.ShowPermissions()) {
+  if (opts.ListPermissions()) {
     ShowPermissions(permissions);
     return 0;
   }
@@ -112,19 +117,19 @@ int Do(Permissions &permissions, const OptArgs &opts) {
     return 0;
   }
 
-  if (opts.ClearAuthTokens()) {
+  if (opts.Clear()) {
     ClearAuthTokens(permissions);
+    return 0;
+  }
+
+  if (!opts.ConfigPath().empty()) {
+    CheckConfiguration(opts);
     return 0;
   }
 
   if (opts.CommandArguments() == nullptr) {
     ShowUsage();
     return 1;
-  }
-
-  if (!opts.ConfigPath().empty()) {
-    CheckConfiguration(opts);
-    return 0;
   }
 
   std::vector<char *> envs;
@@ -136,16 +141,14 @@ int Do(Permissions &permissions, const OptArgs &opts) {
 
 int main(int argc, char *argv[]) {
   try {
-    if (static_cast<int>(geteuid()) !=root_user.Id()
-        || static_cast<int>(getegid()) != root_user.GroupId()) {
-      throw suex::PermissionError("suex effective uid & effective gid should be 0",
+    if (static_cast<int>(geteuid()) != root_user.Id() ||
+        static_cast<int>(getegid()) != root_user.GroupId()) {
+      throw suex::PermissionError("suex setid & setgid are no set",
                                   geteuid(),
                                   getegid());
     }
-
     OptArgs opts{argc, argv};
-    Permissions permissions{PATH_CONFIG, opts.AuthService()};
-
+    Permissions permissions{PATH_CONFIG, opts.AuthStyle()};
     CreateRunDirectory();
     return Do(permissions, opts);
   } catch (InvalidUsage &) {
