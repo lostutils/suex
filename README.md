@@ -5,8 +5,7 @@
 
 <h4 align="center">A complete re-implementation of OpenBSD's doas that's extremely more robust</h4>
 
-*doas* is a utility that is aimed to replace *sudo* for most ordinary use cases.
-Ted Unagst's, an OpenBSD developer, explained why He originally wrote it in his blog post: [doas - dedicated openbsd application subexecutor](https://www.tedunangst.com/flak/post/doas).
+*doas* is a utility created by Ted Unagst (an OpenBSD developer) that aimed to replace *sudo* for most ordinary use cases. He explained why he wrote *doas* in a blog post: [doas - dedicated openbsd application subexecutor](https://www.tedunangst.com/flak/post/doas).
 
 The gist is that `sudo` is hard to configure and does a lot more then the standard user needs.  
 
@@ -14,20 +13,20 @@ The gist is that `sudo` is hard to configure and does a lot more then the standa
 
 ## Why Another Port?
 
-`doas` only targets *OpenBSD*, and lacked features that I felt were missing from it and `sudo` as well.  
+However, `doas` only targets *OpenBSD*, and lacked features that I felt were missing from it and `sudo` as well.  
 Furthermore, all ports I looked at weren't production ready & poorly written.
 
 Instead of creating my own port, I decided to re-write `doas` and create a new version that fixes the issues I care about.
 
 ## Project Goals
 
-* ***Secure***. User's must not be able to abuse the utility, and it should protect the user from making stupid mistakes.
+* ***Secure***. Users must not be able to abuse the utility, and it should protect users from making stupid mistakes.
 
-* **Easy**. The utility should be easy to audit, to maintain, to extend and to contribute to.
+* ***Easy***. The utility should be easy to audit, to maintain, to extend, and to contribute to.
 
-* ***Friendly***. Rule creation should be straight forward. Rule should be easy to understand and easy to debug.
+* ***Friendly***. Rule creation should be straightforward. Rules should be easy to understand and easy to debug.
 
-* ***Powerful***. Rules should be short, concise and allow find-grained control.
+* ***Powerful***. Rules should be short, concise, and allow fine-grained control.
 
 * ***Feature Parity***. This project should have *complete* feature parity with the original utility.
 
@@ -36,8 +35,8 @@ To achieve these goals, the following design decisions were made:
 1. The whole project was implemented in modern C++
 2. Explicit is better then implicit (for instance, rule commands must be absolute paths)
 3. Prefer using the standard library when possible - for the sake of security and maintainability.
-5. Commands are globs, which allows to use the same rule for many executables.
-1. Arguments are PCRE-compliant regular expressions, which allows to create fine-grained rules.
+5. Commands are globs, which allows the same rule to be used for many executables.
+1. Arguments are PCRE-compliant regular expressions, which allows the creation of fine-grained rules.
 
 ## Getting started
 
@@ -86,7 +85,7 @@ In order to reach 1.0 the project must:
 2. pass a professional security audit.
 3. have a continuous test & integration pipeline.
 4. be available on major *client* distributions, i.e: Ubuntu, Fedora, Arch
-5. have both an faq & examples page that have quality enough content in them
+5. have both an faq & examples page that have enough quality content in them
 
 ## Authors
 
