@@ -6,15 +6,21 @@ using namespace suex::logger;
 
 const std::string TypeName(Type type) {
   switch (type) {
-    case Type::DEBUG:
+    case Type::DEBUG: {
       return "DEBUG";
-    case INFO:
+    }
+    case INFO: {
       return "INFO";
-    case WARNING:
+    }
+    case WARNING: {
       return "WARNING";
-    case ERROR:
+    }
+    case ERROR: {
       return "ERROR";
-    default: { throw std::runtime_error("unknown logger"); }
+    }
+    default: {
+      throw std::runtime_error("unknown logger");
+    }
   }
 }
 

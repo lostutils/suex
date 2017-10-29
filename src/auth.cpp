@@ -4,7 +4,8 @@
 #include <logger.h>
 #include <optarg.h>
 #include <security/pam_misc.h>
-#include <cstring>
+#include <conf.h>
+#include <file.h>
 
 using namespace suex;
 using namespace suex::optargs;
@@ -35,49 +36,51 @@ std::string GetFilepath(const std::string &service_name,
 }
 
 void SetToken(time_t ts, const std::string &filename) {
-  std::ofstream f(filename);
-  DEFER(f.close());
-  f << ts;
+  FILE *f = fopen(filename.c_str(), "w");
+  if (f == nullptr) {
+    throw suex::IOError("couldn't open token file for writing");
+  }
 
-  // chmod 440
-  if (chmod(filename.c_str(), S_IRUSR | S_IRGRP) < 0) {
-    throw suex::PermissionError(std::strerror(errno));
-  }
-  // chown root:root
-  if (chown(filename.c_str(), 0, 0) < 0) {
-    throw suex::PermissionError(std::strerror(errno));
-  }
+  DEFER(fclose(f));
+  file::Secure(fileno(f));
+
+  file::Buffer buff(fileno(f), std::ios::out);
+  std::ostream os(&buff);
+  os << ts;
 }
 
 time_t GetToken(const std::string &filename) {
-  struct stat fstat {};
+  FILE *f = fopen(filename.c_str(), "r");
+  DEFER(if (f != nullptr) fclose(f));
 
-  if (stat(filename.c_str(), &fstat) != 0) {
+  struct stat st{};
+  if (fstat(fileno(f), &st) != 0) {
     SetToken(0, filename);
-    if (stat(filename.c_str(), &fstat) != 0) {
-      throw suex::IOError(std::strerror(errno));
+
+    f = fopen(filename.c_str(), "r");
+    if (f == nullptr || fstat(fileno(f), &st) != 0) {
+      throw suex::IOError("couldn't open token file for reading");
     }
   }
 
-  if (!S_ISREG(fstat.st_mode)) {
+  if (!S_ISREG(st.st_mode)) {
     throw suex::IOError("auth timestamp is not a file");
   }
 
-  if (fstat.st_uid != 0 || fstat.st_gid != 0 ||
-      utils::PermissionBits(fstat) != 440) {
+  if (!file::IsSecure(fileno(f))) {
     throw suex::PermissionError("auth timestamp file has invalid permissions");
   }
 
-  std::ifstream f(filename);
-  DEFER(f.close());
+  file::Buffer buff(fileno(f), std::ios::in);
+  std::istream is(&buff);
   time_t ts;
-  f >> ts;
+  is >> ts;
   return ts;
 }
 
 int PamConversation(int, const struct pam_message **,
                     struct pam_response **resp, void *appdata) {
-  auto auth_data = *(struct auth_data *)appdata;
+  auto auth_data = *(struct auth_data *) appdata;
   if (!auth_data.prompt) {
     return PAM_AUTH_ERR;
   }
@@ -126,9 +129,9 @@ bool auth::Authenticate(const std::string &service_name, bool prompt,
                         const std::string &cache_token) {
   logger::debug() << "Authenticating | "
                   << "policy: " << service_name << " | "
-                                                   "cache: "
+                  << "cache: "
                   << (cache_token.empty() ? "off" : "on") << " | "
-                                                             "prompt: "
+                  << "prompt: "
                   << (prompt ? "on" : "off") << std::endl;
 
   if (!PolicyExists(service_name)) {
@@ -169,11 +172,11 @@ bool auth::Authenticate(const std::string &service_name, bool prompt,
   }
 
   DEFER({
-    retval = pam_end(handle, retval);
-    if (retval != PAM_SUCCESS) {
-      logger::debug() << "[pam]: pam_end returned " << retval << std::endl;
-    }
-  });
+          retval = pam_end(handle, retval);
+          if (retval != PAM_SUCCESS) {
+            logger::debug() << "[pam]: pam_end returned " << retval << std::endl;
+          }
+        });
 
   retval = pam_authenticate(handle, 0);
   if (retval != PAM_SUCCESS) {

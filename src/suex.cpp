@@ -90,6 +90,11 @@ int Do(Permissions &permissions, const OptArgs &opts) {
   }
 
   if (opts.EditConfig()) {
+
+    if (opts.ClearAuthTokens()) {
+      RemoveEditLock();
+    }
+
     EditConfiguration(opts, permissions);
     return 0;
   }
@@ -117,14 +122,14 @@ int Do(Permissions &permissions, const OptArgs &opts) {
     return 0;
   }
 
-  if (opts.CommandArguments() == nullptr) {
-    ShowUsage();
-    return 1;
-  }
-
   if (!opts.ConfigPath().empty()) {
     CheckConfiguration(opts);
     return 0;
+  }
+
+  if (opts.CommandArguments() == nullptr) {
+    ShowUsage();
+    return 1;
   }
 
   std::vector<char *> envs;
@@ -136,16 +141,14 @@ int Do(Permissions &permissions, const OptArgs &opts) {
 
 int main(int argc, char *argv[]) {
   try {
-    if (static_cast<int>(geteuid()) !=root_user.Id()
-        || static_cast<int>(getegid()) != root_user.GroupId()) {
-      throw suex::PermissionError("suex effective uid & effective gid should be 0",
+    if (static_cast<int>(geteuid()) != root_user.Id() ||
+        static_cast<int>(getegid()) != root_user.GroupId()) {
+      throw suex::PermissionError("suex setid & setgid are no set",
                                   geteuid(),
                                   getegid());
     }
-
     OptArgs opts{argc, argv};
     Permissions permissions{PATH_CONFIG, opts.AuthService()};
-
     CreateRunDirectory();
     return Do(permissions, opts);
   } catch (InvalidUsage &) {

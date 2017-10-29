@@ -13,6 +13,8 @@ void ClearAuthTokens(const permissions::Permissions &permissions);
 
 void ShowVersion();
 
+void RemoveEditLock();
+
 void ShowPermissions(permissions::Permissions &permissions);
 
 void EditConfiguration(const optargs::OptArgs &opts,
