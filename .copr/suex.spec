@@ -1,5 +1,5 @@
 Name:       suex
-Version:    0.2.5
+Version:    0.2.3
 Release:    1%{?dist}
 Summary:    Execute commands as another user
 License:    MIT
