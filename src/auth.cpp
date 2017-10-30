@@ -4,7 +4,6 @@
 #include <file.h>
 #include <glob.h>
 #include <logger.h>
-#include <optarg.h>
 #include <security/pam_misc.h>
 
 using namespace suex;
@@ -49,17 +48,20 @@ void SetToken(time_t ts, const std::string &filename) {
 }
 
 time_t GetToken(const std::string &filename) {
+  if (!path::Exists(filename)) {
+    SetToken(0, filename);
+    return 0;
+  }
+
   FILE *f = fopen(filename.c_str(), "r");
-  DEFER(if (f != nullptr) fclose(f));
+  if (f == nullptr) {
+    throw suex::IOError("couldn't open token file for reading");
+  }
+  DEFER(fclose(f));
 
   struct stat st {};
   if (fstat(fileno(f), &st) != 0) {
-    SetToken(0, filename);
-
-    f = fopen(filename.c_str(), "r");
-    if (f == nullptr || fstat(fileno(f), &st) != 0) {
-      throw suex::IOError("couldn't open token file for reading");
-    }
+    throw suex::IOError("couldn't open token file for reading");
   }
 
   if (!S_ISREG(st.st_mode)) {
@@ -72,6 +74,7 @@ time_t GetToken(const std::string &filename) {
 
   file::Buffer buff(fileno(f), std::ios::in);
   std::istream is(&buff);
+
   time_t ts;
   is >> ts;
   return ts;
