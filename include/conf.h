@@ -28,8 +28,8 @@ class Permissions {
  private:
   typedef std::vector<Entity> Collection;
   std::string path_;
-  bool secure_;
   std::string auth_style_;
+  bool secure_;
   std::vector<Entity> perms_{};
   void Parse(int lineno, const std::string &line, bool only_user);
 
