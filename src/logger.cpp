@@ -18,9 +18,7 @@ const std::string TypeName(Type type) {
     case ERROR: {
       return "ERROR";
     }
-    default: {
-      throw std::runtime_error("unknown logger");
-    }
+    default: { throw std::runtime_error("unknown logger"); }
   }
 }
 

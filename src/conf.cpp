@@ -224,7 +224,6 @@ bool Permissions::Validate(const std::string &path,
 Permissions::Permissions(const std::string &path, const std::string &auth_style,
                          bool only_user)
     : path_{path}, auth_style_{auth_style} {
-
   // only secure the main file
   bool secure{PATH_CONFIG == path};
 

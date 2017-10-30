@@ -15,9 +15,9 @@ OptArgs::OptArgs(int argc, char *argv[]) {
   }
   args_ = std::vector<char *>{argv + optind, argv + argc};
   // low level c code needs an indication when an array of pointers ends
-  args_.emplace_back((char *) nullptr);
+  args_.emplace_back((char *)nullptr);
   binary_ = path::Locate(args_.front());
-  args_.front() = (char *) binary_.c_str();
+  args_.front() = (char *)binary_.c_str();
 }
 
 int OptArgs::GetArgumentCount(int argc, char *argv[]) {

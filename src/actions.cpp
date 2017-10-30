@@ -1,10 +1,10 @@
 #include <actions.h>
 #include <auth.h>
 #include <exceptions.h>
+#include <file.h>
 #include <logger.h>
 #include <version.h>
 #include <wait.h>
-#include <file.h>
 
 using namespace suex;
 using suex::permissions::Permissions;
@@ -60,7 +60,7 @@ void suex::SwitchUserAndExecute(const User &user, char *const *cmdargv,
 
   // will not get here unless execvp failed
   throw std::runtime_error(utils::CommandArgsText(cmdargv) + " : " +
-      std::strerror(errno));
+                           std::strerror(errno));
 }
 
 void suex::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
@@ -82,9 +82,7 @@ void suex::ClearAuthTokens(const Permissions &permissions) {
   logger::info() << "cleared " << cleared << " tokens" << std::endl;
 }
 
-void suex::RemoveEditLock() {
-  file::Remove(PATH_EDIT_LOCK);
-}
+void suex::RemoveEditLock() { file::Remove(PATH_EDIT_LOCK); }
 
 void suex::ShowVersion() { std::cout << "suex: " << VERSION << std::endl; }
 
@@ -99,7 +97,8 @@ void suex::EditConfiguration(const OptArgs &opts,
   TurnOnVerboseOutput(permissions);
 
   if (utils::path::Exists(PATH_EDIT_LOCK)) {
-    throw suex::PermissionError("suex.conf is being edited from another session");
+    throw suex::PermissionError(
+        "suex.conf is being edited from another session");
   }
 
   if (!auth::Authenticate(permissions.AuthStyle(), true)) {
@@ -109,9 +108,9 @@ void suex::EditConfiguration(const OptArgs &opts,
   file::Create(PATH_EDIT_LOCK, true);
   file::Clone(PATH_CONFIG, PATH_CONFIG_TMP, true);
   DEFER({
-          file::Remove(PATH_EDIT_LOCK);
-          file::Remove(PATH_CONFIG_TMP);
-        });
+    file::Remove(PATH_EDIT_LOCK);
+    file::Remove(PATH_CONFIG_TMP);
+  });
 
   std::vector<char *> cmdargv{strdup(utils::GetEditor().c_str()),
                               strdup(PATH_CONFIG_TMP), nullptr};
@@ -132,14 +131,14 @@ void suex::EditConfiguration(const OptArgs &opts,
 
     // parent process should wait until the child exists
     int status;
-    while (-1 == waitpid(pid, &status, 0));
+    while (-1 == waitpid(pid, &status, 0))
+      ;
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
       throw std::runtime_error("error while waiting for $EDITOR");
     }
 
     // update the file permissions after editing it
     if (Permissions::Validate(PATH_CONFIG_TMP, opts.AuthStyle())) {
-
       file::Clone(PATH_CONFIG_TMP, PATH_CONFIG, true);
       std::cout << PATH_CONFIG << " changes applied." << std::endl;
       return;

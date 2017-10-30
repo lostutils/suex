@@ -1,11 +1,11 @@
 #include <auth.h>
+#include <conf.h>
 #include <exceptions.h>
+#include <file.h>
 #include <glob.h>
 #include <logger.h>
 #include <optarg.h>
 #include <security/pam_misc.h>
-#include <conf.h>
-#include <file.h>
 
 using namespace suex;
 using namespace suex::optargs;
@@ -30,8 +30,7 @@ std::string GetTokenName(const std::string &style,
 std::string GetFilepath(const std::string &style,
                         const std::string &cache_token) {
   std::stringstream ss;
-  ss << PATH_SUEX_TMP << "/" << GetTokenName(style, cache_token)
-     << getsid(0);
+  ss << PATH_SUEX_TMP << "/" << GetTokenName(style, cache_token) << getsid(0);
   return ss.str();
 }
 
@@ -53,7 +52,7 @@ time_t GetToken(const std::string &filename) {
   FILE *f = fopen(filename.c_str(), "r");
   DEFER(if (f != nullptr) fclose(f));
 
-  struct stat st{};
+  struct stat st {};
   if (fstat(fileno(f), &st) != 0) {
     SetToken(0, filename);
 
@@ -80,7 +79,7 @@ time_t GetToken(const std::string &filename) {
 
 int PamConversation(int, const struct pam_message **,
                     struct pam_response **resp, void *appdata) {
-  auto auth_data = *(struct auth_data *) appdata;
+  auto auth_data = *(struct auth_data *)appdata;
   if (!auth_data.prompt) {
     return PAM_AUTH_ERR;
   }
@@ -95,8 +94,8 @@ int PamConversation(int, const struct pam_message **,
 
 int auth::ClearTokens(const std::string &style) {
   glob_t globbuf{};
-  std::string glob_pattern{StringFormat("%s/%s*", PATH_SUEX_TMP,
-                                        GetTokenPrefix(style).c_str())};
+  std::string glob_pattern{
+      StringFormat("%s/%s*", PATH_SUEX_TMP, GetTokenPrefix(style).c_str())};
   int retval = glob(glob_pattern.c_str(), 0, nullptr, &globbuf);
   if (retval != 0) {
     logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval
@@ -129,10 +128,8 @@ bool auth::Authenticate(const std::string &style, bool prompt,
                         const std::string &cache_token) {
   logger::debug() << "Authenticating | "
                   << "auth style: " << style << " | "
-                  << "cache: "
-                  << (cache_token.empty() ? "off" : "on") << " | "
-                  << "prompt: "
-                  << (prompt ? "on" : "off") << std::endl;
+                  << "cache: " << (cache_token.empty() ? "off" : "on") << " | "
+                  << "prompt: " << (prompt ? "on" : "off") << std::endl;
 
   if (!StyleExists(style)) {
     throw suex::AuthError("Invalid PAM policy: policy '%s' doesn't exist",
@@ -172,11 +169,11 @@ bool auth::Authenticate(const std::string &style, bool prompt,
   }
 
   DEFER({
-          retval = pam_end(handle, retval);
-          if (retval != PAM_SUCCESS) {
-            logger::debug() << "[pam]: pam_end returned " << retval << std::endl;
-          }
-        });
+    retval = pam_end(handle, retval);
+    if (retval != PAM_SUCCESS) {
+      logger::debug() << "[pam]: pam_end returned " << retval << std::endl;
+    }
+  });
 
   retval = pam_authenticate(handle, 0);
   if (retval != PAM_SUCCESS) {

@@ -1,6 +1,6 @@
 #pragma once
-#include <string>
 #include <ext/stdio_filebuf.h>
+#include <string>
 
 namespace suex::file {
 
@@ -21,6 +21,4 @@ void Secure(int fd);
 void Clone(const std::string &from, const std::string &to, bool secure = false);
 
 void Create(const std::string &path, bool secure = false);
-
 }
-

@@ -26,7 +26,7 @@ bool utils::BypassPermissions(const User &as_user) {
   // if the user / grp are the same as the running user,
   // just run the app without performing any operations
   return running_user.Id() == as_user.Id() &&
-      running_user.GroupId() == as_user.GroupId();
+         running_user.GroupId() == as_user.GroupId();
 }
 
 const std::string utils::Iso8601() {

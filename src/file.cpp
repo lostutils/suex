@@ -1,9 +1,9 @@
-#include <file.h>
-#include <sys/stat.h>
 #include <exceptions.h>
-#include <sys/sendfile.h>
 #include <fcntl.h>
+#include <file.h>
 #include <path.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
 
 using namespace suex;
 using namespace suex::utils;
@@ -32,7 +32,7 @@ void file::Secure(const std::string &path) {
 }
 
 double file::Size(const std::string &path) {
-  struct stat st{};
+  struct stat st {};
   if (stat(path.c_str(), &st) != 0) {
     throw IOError("could not find the file specified");
   }
@@ -52,19 +52,15 @@ void file::Remove(const std::string &path, bool silent) {
 void file::Clone(const std::string &from, const std::string &to, bool secure) {
   int src_fd = open(from.c_str(), O_RDONLY, 0);
   if (src_fd == -1) {
-    throw suex::IOError("can't clone '%s' to '%s': %s",
-                        from.c_str(),
-                        to.c_str(),
-                        std::strerror(errno));
+    throw suex::IOError("can't clone '%s' to '%s': %s", from.c_str(),
+                        to.c_str(), std::strerror(errno));
   }
   DEFER(close(src_fd));
 
   int dst_fd = open(to.c_str(), O_WRONLY | O_TRUNC | O_CREAT);
   if (dst_fd == -1) {
-    throw suex::IOError("can't clone '%s' to '%s': %s",
-                        from.c_str(),
-                        to.c_str(),
-                        std::strerror(errno));
+    throw suex::IOError("can't clone '%s' to '%s': %s", from.c_str(),
+                        to.c_str(), std::strerror(errno));
   }
   DEFER(close(dst_fd));
 
@@ -76,15 +72,13 @@ void file::Clone(const std::string &from, const std::string &to, bool secure) {
     Secure(dst_fd);
   }
 
-  struct stat st{};
+  struct stat st {};
   if (fstat(src_fd, &st) < 0) {
-    throw suex::IOError("can't clone '%s' to '%s': %s",
-                        from.c_str(),
-                        to.c_str(),
-                        std::strerror(errno));
+    throw suex::IOError("can't clone '%s' to '%s': %s", from.c_str(),
+                        to.c_str(), std::strerror(errno));
   }
 
-  if (sendfile(dst_fd, src_fd, nullptr, (size_t) st.st_size) <= 0) {
+  if (sendfile(dst_fd, src_fd, nullptr, (size_t)st.st_size) <= 0) {
     throw suex::IOError("%s: %s", to.c_str(), std::strerror(errno));
   }
 }
@@ -107,10 +101,9 @@ void file::Create(const std::string &path, bool secure) {
   if (secure) {
     Secure(fileno(f));
   }
-
 }
 bool ::suex::file::IsSecure(int fd) {
-  struct stat st{};
+  struct stat st {};
   if (fstat(fd, &st) != 0) {
     throw IOError("could not find the file specified");
   }
@@ -136,4 +129,3 @@ bool ::suex::file::IsSecure(const std::string &path) {
   DEFER(fclose(f));
   return IsSecure(fileno(f));
 }
-

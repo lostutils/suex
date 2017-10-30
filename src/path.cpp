@@ -20,7 +20,7 @@ const std::string path::Locate(const std::string &path, bool searchInPath) {
     throw suex::IOError("path '%s' is empty", path.c_str());
   }
 
-  struct stat fstat{};
+  struct stat fstat {};
   std::string fullpath{Real(path)};
   if (stat(fullpath.c_str(), &fstat) == 0 && S_ISREG(fstat.st_mode)) {
     return fullpath;
@@ -42,7 +42,6 @@ const std::string path::Locate(const std::string &path, bool searchInPath) {
 }
 
 bool path::Exists(const std::string &path) {
-  struct stat fstat{};
+  struct stat fstat {};
   return stat(path.c_str(), &fstat) == 0;
 }
-

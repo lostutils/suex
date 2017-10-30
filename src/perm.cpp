@@ -43,7 +43,7 @@ int setgroups(const User &user) {
   std::vector<gid_t> groupvec{};
 
   while (true) {
-    if (getgrouplist(name, (gid_t) user.GroupId(), &groupvec.front(), &ngroups) <
+    if (getgrouplist(name, (gid_t)user.GroupId(), &groupvec.front(), &ngroups) <
         0) {
       groupvec.resize(static_cast<unsigned long>(ngroups));
       continue;
@@ -58,12 +58,12 @@ void permissions::Set(const User &user) {
                                 user.GroupId());
   }
 
-  if (setgid((gid_t) user.GroupId()) < 0) {
+  if (setgid((gid_t)user.GroupId()) < 0) {
     throw suex::PermissionError("execution of setgid(%d) failed",
                                 user.GroupId());
   }
 
-  if (setuid((uid_t) user.Id()) < 0) {
+  if (setuid((uid_t)user.Id()) < 0) {
     throw suex::PermissionError("execution of setuid(%d) failed", user.Id());
   }
 }
@@ -86,7 +86,7 @@ User::User(const std::string &user) : name_{user}, uid_{-1} {
   // otherwise try to take the one that was passed.
 
   // if both fail, also try to load the user as a uid.
-  struct passwd *pw = user.empty() ? getpwuid((uid_t) running_user.Id())
+  struct passwd *pw = user.empty() ? getpwuid((uid_t)running_user.Id())
                                    : getpwnam(user.c_str());
 
   if (pw == nullptr) {

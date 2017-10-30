@@ -38,8 +38,7 @@ class Permissions {
   explicit Permissions(const std::string &path, const std::string &auth_style,
                        bool only_user = true);
 
-  static bool Validate(const std::string &path,
-                       const std::string &auth_style);
+  static bool Validate(const std::string &path, const std::string &auth_style);
 
   std::string AuthStyle() const { return auth_style_; }
 
