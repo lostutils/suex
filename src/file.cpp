@@ -31,12 +31,21 @@ void file::Secure(const std::string &path) {
   return Secure(fileno(f));
 }
 
-double file::Size(const std::string &path) {
+double file::Size(int fd) {
   struct stat st {};
-  if (stat(path.c_str(), &st) != 0) {
+  if (fstat(fd, &st) != 0) {
     throw IOError("could not find the file specified");
   }
   return st.st_size / 1024.0;
+}
+
+double file::Size(const std::string &path) {
+  FILE *f = fopen(path.c_str(), "r");
+  if (f == nullptr) {
+    throw IOError("path '%s' doesn't exist", path.c_str());
+  }
+  DEFER(fclose(f));
+  return Size(fileno(f));
 }
 
 void file::Remove(const std::string &path, bool silent) {

@@ -9,7 +9,7 @@
 namespace suex::permissions {
 
 #define MAX_LINE 65535
-#define MAX_FILESIZE 8192
+#define MAX_FILE_SIZE 8192
 
 static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
 
@@ -28,6 +28,7 @@ class Permissions {
  private:
   typedef std::vector<Entity> Collection;
   std::string path_;
+  bool secure_;
   std::string auth_style_;
   std::vector<Entity> perms_{};
   void Parse(int lineno, const std::string &line, bool only_user);

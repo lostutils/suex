@@ -6,6 +6,8 @@ namespace suex::file {
 
 typedef __gnu_cxx::stdio_filebuf<char> Buffer;
 
+double Size(int fd);
+
 double Size(const std::string &path);
 
 void Remove(const std::string &path, bool silent = false);

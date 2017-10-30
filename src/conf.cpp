@@ -223,25 +223,20 @@ bool Permissions::Validate(const std::string &path,
 
 Permissions::Permissions(const std::string &path, const std::string &auth_style,
                          bool only_user)
-    : path_{path}, auth_style_{auth_style} {
+    : path_{path}, auth_style_{auth_style}, secure_{PATH_CONFIG == path} {
   // only secure the main file
-  bool secure{PATH_CONFIG == path};
 
   if (!path::Exists(path)) {
-    file::Create(path, secure);
+    file::Create(path, secure_);
   }
-  if (secure && !file::IsSecure(path_)) {
-    throw suex::PermissionError("'%s' is not secure", path_.c_str());
-  }
-
   Reload(only_user);
 }
 
-bool GetLine(std::ifstream &ifs, std::string &line) {
+bool GetLine(std::istream &is, std::string &line) {
   std::stringstream ss;
   char buff{'\0'};
-  while (!ifs.eof() && ss.tellp() < MAX_LINE) {
-    ifs.read(&buff, 1);
+  while (!is.eof() && ss.tellp() < MAX_LINE) {
+    is.read(&buff, 1);
     if (buff == '\n') {
       break;
     }
@@ -249,26 +244,39 @@ bool GetLine(std::ifstream &ifs, std::string &line) {
     ss << buff;
   }
 
-  if (ss.tellp() >= MAX_LINE) {
+  if (ss.tellp() > MAX_LINE) {
     throw ConfigError("line is too long and will not be parsed");
   }
 
   line = ss.str();
 
-  return !ifs.eof();
+  return !is.eof();
 }
 
 void Permissions::Reload(bool only_user) {
-  if (file::Size(path_) > MAX_FILESIZE) {
+  FILE *f = fopen(path_.c_str(), "r");
+
+  if (f == nullptr) {
+    throw IOError("error when opening '%s' for writing", path_.c_str());
+  }
+  DEFER(fclose(f));
+
+  if (secure_ && !file::IsSecure(fileno(f))) {
+    throw suex::PermissionError("'%s' is not secure", path_.c_str());
+  }
+
+  if (file::Size(fileno(f)) > MAX_FILE_SIZE) {
     throw suex::PermissionError("'%s' size is %ld, which is not supported",
                                 path_.c_str(), file::Size(path_));
   }
 
   perms_.clear();
 
-  std::ifstream ifs{path_};
+  file::Buffer buff(fileno(f), std::ios::in);
+  std::istream is(&buff);
+
   std::string line;
-  for (int lineno = 1; GetLine(ifs, line); lineno++) {
+  for (int lineno = 1; GetLine(is, line); lineno++) {
     try {
       Parse(lineno, line, only_user);
     } catch (std::exception &e) {
