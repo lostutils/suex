@@ -1,0 +1,24 @@
+#!/bin/bash
+
+STYLE=$(git config --get hooks.clangformat.style)
+if [ ! -n "${STYLE}" ] ; then
+   echo "clang-format style not set"
+   exit 1
+fi
+
+format_files() {
+   files=$(git diff-index --cached --name-only HEAD -- '*.*pp' '*.h')
+   for file in $files; do
+     clang-format -i -style=${STYLE} ${file}
+     git add ${file}
+   done
+}
+
+case "${1}" in
+  --about )
+    echo "Runs clang-format on source files"
+    ;;
+  * )
+     format_files
+    ;;
+esac
