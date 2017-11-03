@@ -56,6 +56,11 @@ add_custom_target(secure
         COMMAND chmod u+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
         COMMAND chmod g+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex)
 
+set_property(
+   TARGET suex
+   PROPERTY CXX_CLANG_TIDY clang-tidy;-checks=*;-warnings-as-errors=*
+   )
+
 install(FILES ${CMAKE_SOURCE_DIR}/man/suex.1 DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1)
 install(FILES ${CMAKE_SOURCE_DIR}/man/suex.conf.5 DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man5)
 install(FILES ${CMAKE_SOURCE_DIR}/doc/suex.conf DESTINATION /etc/
