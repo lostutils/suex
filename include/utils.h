@@ -6,6 +6,7 @@
 #include <perm.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <gsl/span>
 #include <iostream>
 
 static const auto running_user = suex::permissions::User(getuid());
@@ -14,14 +15,16 @@ static const auto wheel_group = suex::permissions::Group("wheel");
 
 #define CONCAT_(a, b) a##b
 #define CONCAT(a, b) CONCAT_(a, b)
-#define DEFER(fn) ScopeGuard CONCAT(__defer__, __LINE__) = [&]() { fn; }
+#define DEFER(fn)                          \
+  ScopeGuard CONCAT(__defer__, __LINE__) { \
+    [&]() { fn; }                          \
+  }
 
 class ScopeGuard {
  public:
   template <class Callable>
-  ScopeGuard(Callable &&fn) : fn_(std::forward<Callable>(fn)) {}
-
-  ScopeGuard(ScopeGuard &&other) : fn_(std::move(other.fn_)) {
+  explicit ScopeGuard(Callable &&fn) : fn_(std::forward<Callable>(fn)) {}
+  ScopeGuard(ScopeGuard &other) noexcept : fn_(std::move(other.fn_)) {
     other.fn_ = nullptr;
   }
 
@@ -39,7 +42,11 @@ class ScopeGuard {
 };
 
 namespace suex::utils {
-std::string CommandArgsText(char *const *cmdargv);
+std::string CommandArgsText(const std::vector<char *> &cmdargv);
+template <typename T>
+inline T *ConstCorrect(T const *ptr) {
+  return const_cast<T *>(ptr);
+}
 
 bool BypassPermissions(const suex::permissions::User &as_user);
 

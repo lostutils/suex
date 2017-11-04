@@ -1,44 +1,43 @@
 #include <actions.h>
 #include <auth.h>
 #include <exceptions.h>
+
 #include <file.h>
 #include <logger.h>
 #include <version.h>
 #include <wait.h>
 
-using namespace suex;
 using suex::permissions::Permissions;
 using suex::permissions::User;
 using suex::optargs::OptArgs;
-using namespace suex::utils;
 
 #define PATH_EDIT_LOCK PATH_VAR_RUN "/suex/edit.lock"
 #define PATH_CONFIG_TMP "/tmp/suex.conf"
 
-void suex::ShowPermissions(permissions::Permissions &permissions) {
-  if (permissions.Privileged()) {
-    permissions.Reload(false);
-  }
-
+void suex::ShowPermissions(const permissions::Permissions &permissions) {
   for (const permissions::Entity &e : permissions) {
+    if (e.Owner().Id() != running_user.Id() && !permissions.Privileged()) {
+      continue;
+    }
+
     std::cout << e << std::endl;
   }
 }
 
-const permissions::Entity *suex::Permit(const Permissions &perms,
+const permissions::Entity *suex::Permit(const Permissions &permissions,
                                         const OptArgs &opts) {
-  char *const *cmdargv{opts.CommandArguments()};
-  auto perm = perms.Get(opts.AsUser(), cmdargv);
+  auto perm = permissions.Get(opts.AsUser(), opts.CommandArguments());
   if (perm == nullptr || perm->Deny()) {
     std::stringstream ss;
-    throw suex::PermissionError("You are not allowed to execute '%s' as %s",
-                                utils::CommandArgsText(cmdargv).c_str(),
-                                opts.AsUser().Name().c_str());
+    throw suex::PermissionError(
+        "You are not allowed to execute '%s' as %s",
+        utils::CommandArgsText(opts.CommandArguments()).c_str(),
+        opts.AsUser().Name().c_str());
   }
 
   if (perm->PromptForPassword()) {
     std::string cache_token{perm->CacheAuth() ? perm->Command() : ""};
-    if (!auth::Authenticate(perms.AuthStyle(), opts.Interactive(),
+    if (!auth::Authenticate(permissions.AuthStyle(), opts.Interactive(),
                             cache_token)) {
       throw suex::PermissionError("Incorrect password");
     }
@@ -46,8 +45,8 @@ const permissions::Entity *suex::Permit(const Permissions &perms,
   return perm;
 }
 
-void suex::SwitchUserAndExecute(const User &user, char *const *cmdargv,
-                                char *const *envp) {
+void suex::SwitchUserAndExecute(const User &user, char *const cmdargv[],
+                                char *const envp[]) {
   // update the HOME env according to the as_user dir
   setenv("HOME", user.HomeDirectory().c_str(), 1);
 
@@ -56,11 +55,7 @@ void suex::SwitchUserAndExecute(const User &user, char *const *cmdargv,
 
   // execute with uid and gid. path lookup is done internally, so execvp is not
   // needed.
-  execvpe(cmdargv[0], &cmdargv[0], envp);
-
-  // will not get here unless execvp failed
-  throw std::runtime_error(utils::CommandArgsText(cmdargv) + " : " +
-                           std::strerror(errno));
+  execvpe(*cmdargv, &(*cmdargv), envp);
 }
 
 void suex::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
@@ -112,8 +107,9 @@ void suex::EditConfiguration(const OptArgs &opts,
     file::Remove(PATH_CONFIG_TMP);
   });
 
-  std::vector<char *> cmdargv{strdup(utils::GetEditor().c_str()),
-                              strdup(PATH_CONFIG_TMP), nullptr};
+  std::string editor{utils::GetEditor()};
+  std::vector<char *> cmdargv{utils::ConstCorrect(editor.c_str()),
+                              utils::ConstCorrect(PATH_CONFIG_TMP), nullptr};
 
   // loop until configuration is valid
   // or user asked to stop
@@ -131,8 +127,10 @@ void suex::EditConfiguration(const OptArgs &opts,
 
     // parent process should wait until the child exists
     int status;
-    while (-1 == waitpid(pid, &status, 0))
-      ;
+
+    while (-1 == waitpid(pid, &status, 0)) {
+      // wait...
+    };
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
       throw std::runtime_error("error while waiting for $EDITOR");
     }
@@ -154,7 +152,7 @@ void suex::EditConfiguration(const OptArgs &opts,
 }
 
 void suex::CheckConfiguration(const OptArgs &opts) {
-  if (opts.CommandArguments() == nullptr) {
+  if (opts.CommandArguments().empty()) {
     if (!Permissions::Validate(opts.ConfigPath(), opts.AuthStyle())) {
       throw suex::ConfigError("configuration is not valid");
     }

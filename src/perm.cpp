@@ -3,20 +3,21 @@
 #include <logger.h>
 #include <pwd.h>
 
-using namespace suex;
-using namespace suex::permissions;
+using suex::permissions::Entity;
+using suex::permissions::User;
+using suex::permissions::Group;
 
-std::ostream &permissions::operator<<(std::ostream &os, const Entity &e) {
-  os << (e.Deny() ? "deny" : "permit") << " " << e.Owner().Name() << " as "
-     << e.AsUser().Name() << " ";
+std::ostream &permissions::operator<<(std::ostream &os, const Entity &entity) {
+  os << (entity.Deny() ? "deny" : "permit") << " " << entity.Owner().Name()
+     << " as " << entity.AsUser().Name() << " ";
 
   std::stringstream opts_ss;
-  opts_ss << (e.PromptForPassword() ? "" : "nopass ")
-          << (e.KeepEnvironment() ? "keepenv " : "")
-          << (e.CacheAuth() ? "persist " : "");
+  opts_ss << (entity.PromptForPassword() ? "" : "nopass ")
+          << (entity.KeepEnvironment() ? "keepenv " : "")
+          << (entity.CacheAuth() ? "persist " : "");
 
   os << "options " << (opts_ss.tellp() == 0 ? "- " : opts_ss.str()) << "cmd "
-     << e.Command();
+     << entity.Command();
   return os;
 }
 
@@ -27,12 +28,15 @@ bool Entity::CanExecute(const User &user, const std::string &cmd) const {
 
   if (AsUser().Id() != user.Id()) {
     return false;
-  }
-
+  };
   std::smatch matches;
-  bool matched{std::regex_match(cmd, matches, cmd_re_)};
-  logger::debug() << (matched ? "Y" : "N") << " " << cmd_re_txt_
-                  << " ~= " << cmd << std::endl;
+  bool matched = std::regex_match(cmd, matches, cmd_re_);
+
+  if (matched) {
+    logger::debug() << "[!] ";
+  }
+  logger::debug() << cmd_re_txt_ << " ~= " << cmd << std::endl;
+
   return matched;
 }
 
@@ -43,9 +47,9 @@ int setgroups(const User &user) {
   std::vector<gid_t> groupvec{};
 
   while (true) {
-    if (getgrouplist(name, (gid_t)user.GroupId(), &groupvec.front(), &ngroups) <
-        0) {
-      groupvec.resize(static_cast<unsigned long>(ngroups));
+    if (getgrouplist(name, static_cast<gid_t>(user.GroupId()),
+                     &groupvec.front(), &ngroups) < 0) {
+      groupvec.resize(static_cast<uint64_t>(ngroups));
       continue;
     }
     return setgroups(static_cast<size_t>(ngroups), &groupvec.front());
@@ -58,12 +62,12 @@ void permissions::Set(const User &user) {
                                 user.GroupId());
   }
 
-  if (setgid((gid_t)user.GroupId()) < 0) {
+  if (setgid(static_cast<gid_t>(user.GroupId())) < 0) {
     throw suex::PermissionError("execution of setgid(%d) failed",
                                 user.GroupId());
   }
 
-  if (setuid((uid_t)user.Id()) < 0) {
+  if (setuid(static_cast<uid_t>(user.Id())) < 0) {
     throw suex::PermissionError("execution of setuid(%d) failed", user.Id());
   }
 }
@@ -86,8 +90,9 @@ User::User(const std::string &user) : name_{user}, uid_{-1} {
   // otherwise try to take the one that was passed.
 
   // if both fail, also try to load the user as a uid.
-  struct passwd *pw = user.empty() ? getpwuid((uid_t)running_user.Id())
-                                   : getpwnam(user.c_str());
+  const struct passwd *pw =
+      user.empty() ? getpwuid(static_cast<uid_t>(running_user.Id()))
+                   : getpwnam(user.c_str());
 
   if (pw == nullptr) {
     try {

@@ -3,12 +3,8 @@
 #include <file.h>
 #include <path.h>
 #include <sys/sendfile.h>
-#include <sys/stat.h>
 
-using namespace suex;
-using namespace suex::utils;
-
-void file::Secure(int fd) {
+void suex::file::Secure(int fd) {
   // chown root:root
   if (fchown(fd, 0, 0) < 0) {
     throw suex::PermissionError(std::strerror(errno));
@@ -20,7 +16,7 @@ void file::Secure(int fd) {
   }
 }
 
-void file::Secure(const std::string &path) {
+void suex::file::Secure(const std::string &path) {
   FILE *f = fopen(path.c_str(), "r");
 
   if (f == nullptr) {
@@ -31,7 +27,7 @@ void file::Secure(const std::string &path) {
   return Secure(fileno(f));
 }
 
-double file::Size(int fd) {
+double suex::file::Size(int fd) {
   struct stat st {};
   if (fstat(fd, &st) != 0) {
     throw IOError("could not find the file specified");
@@ -39,7 +35,7 @@ double file::Size(int fd) {
   return st.st_size / 1024.0;
 }
 
-double file::Size(const std::string &path) {
+double suex::file::Size(const std::string &path) {
   FILE *f = fopen(path.c_str(), "r");
   if (f == nullptr) {
     throw IOError("path '%s' doesn't exist", path.c_str());
@@ -48,17 +44,24 @@ double file::Size(const std::string &path) {
   return Size(fileno(f));
 }
 
-void file::Remove(const std::string &path, bool silent) {
-  if (!path::Exists(path)) {
-    return;
+bool suex::file::Remove(const std::string &path, bool silent) {
+  if (!utils::path::Exists(path)) {
+    return false;
   }
 
-  if (remove(path.c_str()) != 0 && !silent) {
-    throw suex::IOError("%s: %s", path.c_str(), std::strerror(errno));
+  if (remove(path.c_str()) == 0) {
+    return true;
   }
+
+  if (silent) {
+    return false;
+  }
+
+  throw suex::IOError("%s: %s", path.c_str(), std::strerror(errno));
 }
 
-void file::Clone(const std::string &from, const std::string &to, bool secure) {
+void suex::file::Clone(const std::string &from, const std::string &to,
+                       bool secure) {
   int src_fd = open(from.c_str(), O_RDONLY, 0);
   if (src_fd == -1) {
     throw suex::IOError("can't clone '%s' to '%s': %s", from.c_str(),
@@ -66,7 +69,8 @@ void file::Clone(const std::string &from, const std::string &to, bool secure) {
   }
   DEFER(close(src_fd));
 
-  int dst_fd = open(to.c_str(), O_WRONLY | O_TRUNC | O_CREAT);
+  int dst_fd = open(to.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0);
+
   if (dst_fd == -1) {
     throw suex::IOError("can't clone '%s' to '%s': %s", from.c_str(),
                         to.c_str(), std::strerror(errno));
@@ -87,12 +91,12 @@ void file::Clone(const std::string &from, const std::string &to, bool secure) {
                         to.c_str(), std::strerror(errno));
   }
 
-  if (sendfile(dst_fd, src_fd, nullptr, (size_t)st.st_size) <= 0) {
+  if (sendfile(dst_fd, src_fd, nullptr, static_cast<size_t>(st.st_size)) <= 0) {
     throw suex::IOError("%s: %s", to.c_str(), std::strerror(errno));
   }
 }
 
-void file::Create(const std::string &path, bool secure) {
+void suex::file::Create(const std::string &path, bool secure) {
   if (utils::path::Exists(path)) {
     throw IOError("file '%s' already exists", path.c_str());
   }
@@ -103,7 +107,7 @@ void file::Create(const std::string &path, bool secure) {
   }
   DEFER(fclose(f));
 
-  file::Buffer buff(fileno(f), std::ios::out);
+  suex::file::Buffer buff(fileno(f), std::ios::out);
   std::ostream os(&buff);
   os << "";
 

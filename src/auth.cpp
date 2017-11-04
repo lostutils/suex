@@ -4,11 +4,10 @@
 #include <file.h>
 #include <glob.h>
 #include <logger.h>
-#include <security/pam_misc.h>
 
-using namespace suex;
-using namespace suex::optargs;
-using namespace suex::utils;
+#include <security/pam_misc.h>
+#include <gsl/gsl>
+
 struct auth_data {
   pam_response *pam_resp;
   bool prompt;
@@ -48,7 +47,7 @@ void SetToken(time_t ts, const std::string &filename) {
 }
 
 time_t GetToken(const std::string &filename) {
-  if (!path::Exists(filename)) {
+  if (!utils::path::Exists(filename)) {
     SetToken(0, filename);
     return 0;
   }
@@ -80,18 +79,20 @@ time_t GetToken(const std::string &filename) {
   return ts;
 }
 
-int PamConversation(int, const struct pam_message **,
+int PamConversation(int num_msg, const struct pam_message **msg,
                     struct pam_response **resp, void *appdata) {
-  auto auth_data = *(struct auth_data *)appdata;
-  if (!auth_data.prompt) {
+  logger::debug() << "pam converstaion msg " << num_msg << ": " << (*msg)->msg
+                  << std::endl;
+  const auto auth_data = static_cast<struct auth_data *>(appdata);
+  if (!auth_data->prompt) {
     return PAM_AUTH_ERR;
   }
 
   std::string prompt{utils::StringFormat("[suex] password for %s: ",
                                          running_user.Name().c_str())};
-  auth_data.pam_resp->resp = getpass(prompt.c_str());
-  auth_data.pam_resp->resp_retcode = 0;
-  *resp = auth_data.pam_resp;
+  auth_data->pam_resp->resp = getpass(prompt.c_str());
+  auth_data->pam_resp->resp_retcode = 0;
+  *resp = auth_data->pam_resp;
   return PAM_SUCCESS;
 }
 
@@ -99,32 +100,26 @@ int auth::ClearTokens(const std::string &style) {
   glob_t globbuf{};
   std::string glob_pattern{
       StringFormat("%s/%s*", PATH_SUEX_TMP, GetTokenPrefix(style).c_str())};
-  int retval = glob(glob_pattern.c_str(), 0, nullptr, &globbuf);
-  if (retval != 0) {
-    logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval
-                    << std::endl;
+  if (glob(glob_pattern.c_str(), 0, nullptr, &globbuf) != 0) {
+    logger::debug() << "glob returned nothing" << std::endl;
     return 0;
   }
 
   DEFER(globfree(&globbuf));
-  for (size_t i = 0; i < globbuf.gl_pathc; i++) {
-    std::string token_path{globbuf.gl_pathv[i]};
+  auto paths = gsl::make_span(globbuf.gl_pathv, globbuf.gl_pathc);
+  for (std::string token_path : paths) {
     logger::debug() << "clearing: " << token_path << std::endl;
-    retval = remove(token_path.c_str());
-    if (retval != 0) {
-      logger::debug() << "remove(\"" << token_path << "\") returned " << retval
-                      << std::endl;
+    if (file::Remove(token_path, true)) {
       return -1;
     }
   }
-
   return static_cast<int>(globbuf.gl_pathc);
 }
 
 bool auth::StyleExists(const std::string &style) {
   std::string policy_path{
       StringFormat("%s/%s", PATH_PAM_POlICY, style.c_str())};
-  return path::Exists(policy_path);
+  return utils::path::Exists(policy_path);
 }
 
 bool auth::Authenticate(const std::string &style, bool prompt,

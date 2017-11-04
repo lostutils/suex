@@ -3,30 +3,31 @@
 #include <exceptions.h>
 #include <logger.h>
 #include <version.h>
+#include <gsl/gsl>
 
-using namespace suex;
-using namespace suex::utils;
-using namespace suex::optargs;
+using suex::optargs::OptArgs;
 
 OptArgs::OptArgs(int argc, char *argv[]) {
-  int optind = ParseOpts(argc, argv);
+  int optind = OptArgs::ParseOpts(argc, argv);
   if (optind == argc) {
     return;
   }
   args_ = std::vector<char *>{argv + optind, argv + argc};
   // low level c code needs an indication when an array of pointers ends
-  args_.emplace_back((char *)nullptr);
-  binary_ = path::Locate(args_.front());
-  args_.front() = (char *)binary_.c_str();
+  args_.emplace_back(static_cast<char *>(nullptr));
+  binary_ = suex::utils::path::Locate(args_.front());
+  args_.front() = utils::ConstCorrect(binary_.c_str());
 }
 
 int OptArgs::GetArgumentCount(int argc, char *argv[]) {
   std::vector<std::string> param_opts{"-C", "-a", "-u"};
-  std::string prevopt, opt;
-  int i;
-  for (i = 1; i < argc; i++) {
+
+  auto sp = gsl::make_span(argv, argc).subspan(1);
+  std::string prevopt{};
+  int counter = 1;
+  for (std::string opt : sp) {
+    counter++;
     prevopt = opt;
-    opt = argv[i];
     if (opt.front() == '-') {
       continue;
     }
@@ -40,12 +41,13 @@ int OptArgs::GetArgumentCount(int argc, char *argv[]) {
   }
 
   // need to start from next index
-  if (i != argc) {
-    return i + 1;
+  if (counter != argc) {
+    return counter + 1;
   }
 
-  return i;
+  return counter;
 }
+
 int OptArgs::ParseOpts(int argc, char *argv[]) {
   int c;
   argc = GetArgumentCount(argc, argv);
@@ -77,7 +79,8 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
         if (env::Contains("SHELL")) {
           shell = env::Get("SHELL");
         }
-        args_ = std::vector<char *>{strdup(shell.c_str()), nullptr};
+        args_ =
+            std::vector<char *>{utils::ConstCorrect(shell.c_str()), nullptr};
         break;
       }
       case 'E': {
@@ -101,7 +104,7 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
         break;
       }
       case 'C': {
-        config_path_ = path::Locate(optarg);
+        config_path_ = suex::utils::path::Locate(optarg);
         break;
       }
       default: {

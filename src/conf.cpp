@@ -3,15 +3,18 @@
 #include <file.h>
 #include <glob.h>
 #include <logger.h>
+#include <gsl/gsl>
 
-using namespace suex;
-using namespace suex::utils;
-using namespace suex::permissions;
+using suex::permissions::Entity;
+using suex::permissions::Permissions;
+using suex::permissions::User;
+using suex::permissions::Group;
+using suex::permissions::Group;
 
-void ProcessEnv(const std::string &txt, Entity::HashTable &upsert,
-                Entity::Collection &remove) {
-  unsigned long openTokenIdx = txt.find_first_of('{');
-  unsigned long closeTokenIdx = txt.find_last_of('}');
+void ProcessEnv(const std::string &txt, Entity::HashTable *upsert,
+                Entity::Collection *remove) {
+  uint64_t openTokenIdx = txt.find_first_of('{');
+  uint64_t closeTokenIdx = txt.find_last_of('}');
 
   std::istringstream iss{
       txt.substr(openTokenIdx + 1, closeTokenIdx - openTokenIdx - 1)};
@@ -23,14 +26,14 @@ void ProcessEnv(const std::string &txt, Entity::HashTable &upsert,
     }
     // remove: token starts with '-'
     if (token[0] == '-') {
-      remove.emplace(token.substr(1));
+      remove->emplace(token.substr(1));
       continue;
     }
 
-    unsigned long sepIdx = token.find_first_of('=');
+    uint64_t sepIdx = token.find_first_of('=');
 
     if (sepIdx == token.npos) {
-      upsert.emplace(token, env::Get(token));
+      upsert->emplace(token, env::Get(token));
       continue;
     }
 
@@ -45,23 +48,24 @@ void ProcessEnv(const std::string &txt, Entity::HashTable &upsert,
       val = env::Get(realkey);
     }
 
-    upsert.emplace(key, val);
+    upsert->emplace(key, val);
   }
 }
 
-std::vector<User> &GetUsers(const std::string &user, std::vector<User> &users) {
+const std::vector<User> &GetUsers(const std::string &user,
+                                  std::vector<User> *users) {
   if (user[0] == ':') {
     Group grp{user.substr(1, user.npos)};
     if (!grp.Exists()) {
       throw suex::PermissionError("group %s doesn't exist", grp.Name().c_str());
     }
     for (auto mem : grp) {
-      users.emplace_back(mem);
+      users->emplace_back(mem);
     }
   } else {
-    users.emplace_back(User(user));
+    users->emplace_back(User(user));
   }
-  return users;
+  return *users;
 }
 
 bool IsExecutable(const std::string &path) {
@@ -74,35 +78,33 @@ bool IsExecutable(const std::string &path) {
 }
 
 const std::vector<std::string> &GetExecutables(const std::string &glob_pattern,
-                                               std::vector<std::string> &vec) {
+                                               std::vector<std::string> *vec) {
   glob_t globbuf{};
-  int retval = glob(glob_pattern.c_str(), 0, nullptr, &globbuf);
-  DEFER(globfree(&globbuf));
-
-  if (retval != 0) {
-    logger::debug() << "glob(\"" << glob_pattern << "\") returned " << retval
-                    << std::endl;
+  if (glob(glob_pattern.c_str(), 0, nullptr, &globbuf) != 0) {
     logger::warning() << "there are no executables at " << glob_pattern
                       << std::endl;
-    return vec;
+    return *vec;
   }
+  DEFER(globfree(&globbuf));
 
-  for (size_t i = 0; i < globbuf.gl_pathc; i++) {
-    std::string path{globbuf.gl_pathv[i]};
+  auto paths = gsl::make_span(globbuf.gl_pathv, globbuf.gl_pathc);
+
+  for (std::string path : paths) {
     if (IsExecutable(path)) {
-      vec.emplace_back(path::Locate(path, false));
+      vec->emplace_back(suex::utils::path::Locate(path, false));
     }
   }
 
-  if (vec.size() == 1 && !IsExecutable(vec.front())) {
+  if (vec->size() == 1 && !IsExecutable(vec->front())) {
     throw suex::PermissionError("%s is not executable (missing +x flag)",
-                                vec.front().c_str());
+                                vec->front().c_str());
   }
 
-  return vec;
+  return *vec;
 }
 
-void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
+void Permissions::ParseLine(int lineno, const std::string &line,
+                            bool only_user) {
   logger::debug() << "parsing line " << lineno << ": '" << line << "'"
                   << std::endl;
 
@@ -146,7 +148,7 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
       persist = true;
     }
     if (opt_match.find("setenv") == 0) {
-      ProcessEnv(opt_match, env_to_add, env_to_remove);
+      ProcessEnv(opt_match, &env_to_add, &env_to_remove);
     }
   }
 
@@ -164,9 +166,10 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
   }
 
   std::vector<std::string> binaries;
-  for (auto cmd_re : GetExecutables(cmd_binary_, binaries)) {
+  for (const auto &exe : GetExecutables(cmd_binary_, &binaries)) {
     // parse the args
     std::string cmd_args{matches[10].str()};
+    std::string cmd_re{exe};
     if (!cmd_args.empty()) {
       // the regex is reversed because c++11 doesn't support negative
       // lookbehind.
@@ -176,12 +179,12 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
       cmd_args = std::regex_replace(cmd_args, quote_re_, "");
       std::reverse(cmd_args.begin(), cmd_args.end());
 
-      cmd_re += "\\s+" + cmd_args;
+      cmd_re += R"(\s+)" + cmd_args;
     }
 
     // populate the permissions vector
     std::vector<User> users;
-    for (User &user : GetUsers(matches[4], users)) {
+    for (const User &user : GetUsers(matches[4], &users)) {
       if (only_user && user.Id() != running_user.Id()) {
         logger::debug() << "skipping user '" << user.Name()
                         << "' - only user mode" << std::endl;
@@ -200,8 +203,8 @@ void Permissions::Parse(int lineno, const std::string &line, bool only_user) {
   logger::debug() << "line " << lineno << " parsed successfully" << std::endl;
 }
 const Entity *Permissions::Get(const permissions::User &user,
-                               char *const *cmdargv) const {
-  std::string cmd = std::string(*cmdargv);
+                               const std::vector<char *> &cmdargv) const {
+  std::string cmd = std::string(*cmdargv.data());
   std::string cmdtxt{utils::CommandArgsText(cmdargv)};
 
   // take the latest one you find (like the original suex)
@@ -221,18 +224,17 @@ bool Permissions::Validate(const std::string &path,
   return perms.Size() > 0;
 }
 
-Permissions::Permissions(const std::string &path, const std::string &auth_style,
+Permissions::Permissions(const std::string &path, std::string auth_style,
                          bool only_user)
-    : path_{path}, auth_style_{auth_style}, secure_{PATH_CONFIG == path} {
+    : auth_style_{std::move(auth_style)}, secure_{PATH_CONFIG == path} {
   // only secure the main file
-
-  if (!path::Exists(path)) {
+  if (!suex::utils::path::Exists(path)) {
     file::Create(path, secure_);
   }
-  Reload(only_user);
+  Parse(path, only_user);
 }
 
-bool GetLine(std::istream &is, std::string &line) {
+bool GetLine(std::istream &is, std::string *line) {
   std::stringstream ss;
   char buff{'\0'};
   while (!is.eof() && ss.tellp() < MAX_LINE) {
@@ -248,26 +250,26 @@ bool GetLine(std::istream &is, std::string &line) {
     throw ConfigError("line is too long and will not be parsed");
   }
 
-  line = ss.str();
+  *line = ss.str();
 
   return !is.eof();
 }
 
-void Permissions::Reload(bool only_user) {
-  FILE *f = fopen(path_.c_str(), "r");
+void Permissions::Parse(const std::string &path, bool only_user) {
+  FILE *f = fopen(path.c_str(), "r");
 
   if (f == nullptr) {
-    throw IOError("error when opening '%s' for writing", path_.c_str());
+    throw IOError("error when opening '%s' for writing", path.c_str());
   }
   DEFER(fclose(f));
 
   if (secure_ && !file::IsSecure(fileno(f))) {
-    throw suex::PermissionError("'%s' is not secure", path_.c_str());
+    throw suex::PermissionError("'%s' is not secure", path.c_str());
   }
 
   if (file::Size(fileno(f)) > MAX_FILE_SIZE) {
     throw suex::PermissionError("'%s' size is %ld, which is not supported",
-                                path_.c_str(), file::Size(path_));
+                                path.c_str(), file::Size(path));
   }
 
   perms_.clear();
@@ -276,9 +278,9 @@ void Permissions::Reload(bool only_user) {
   std::istream is(&buff);
 
   std::string line;
-  for (int lineno = 1; GetLine(is, line); lineno++) {
+  for (int lineno = 1; GetLine(is, &line); lineno++) {
     try {
-      Parse(lineno, line, only_user);
+      ParseLine(lineno, line, only_user);
     } catch (std::exception &e) {
       logger::error() << e.what() << std::endl;
       perms_.clear();
