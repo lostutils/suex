@@ -1,21 +1,20 @@
 #include <exceptions.h>
 #include <logger.h>
 #include <climits>
+#include <gsl/gsl>
 
-using namespace suex;
-using namespace suex::utils;
-
-const std::string path::Real(const std::string &path) {
+const std::string utils::path::Real(const std::string &path) {
   char buff[PATH_MAX] = {};
-  if (realpath(path.c_str(), buff) == nullptr) {
+  if (realpath(path.c_str(), &buff[0]) == nullptr) {
     logger::warning() << "couldn't locate '" << path << "'" << std::endl;
     return path;
   }
-  logger::debug() << "located '" << path << "': " << buff << std::endl;
-  return std::string(buff);
+  logger::debug() << "located '" << path << "': " << &buff[0] << std::endl;
+  return std::string(&buff[0]);
 }
 
-const std::string path::Locate(const std::string &path, bool searchInPath) {
+const std::string utils::path::Locate(const std::string &path,
+                                      bool searchInPath) {
   if (path.empty()) {
     throw suex::IOError("path '%s' is empty", path.c_str());
   }
@@ -41,7 +40,7 @@ const std::string path::Locate(const std::string &path, bool searchInPath) {
   throw suex::IOError("path '%s' doesn't exist", path.c_str());
 }
 
-bool path::Exists(const std::string &path) {
+bool utils::path::Exists(const std::string &path) {
   struct stat fstat {};
   return stat(path.c_str(), &fstat) == 0;
 }

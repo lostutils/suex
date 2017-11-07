@@ -40,7 +40,7 @@ class User {
 
   const std::string &Shell() const { return shell_; };
 
-  bool Exists() { return uid_ != -1; }
+  bool Exists() const { return uid_ != -1; }
 
  private:
   std::string name_;

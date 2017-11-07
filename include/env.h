@@ -4,7 +4,7 @@
 #include <unordered_map>
 
 namespace suex::env {
-char *const *Raw();
+char **Raw();
 std::string Get(const std::string &env);
 char *GetRaw(const std::string &env);
 bool Contains(const std::string &env);

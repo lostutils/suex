@@ -10,7 +10,7 @@ double Size(int fd);
 
 double Size(const std::string &path);
 
-void Remove(const std::string &path, bool silent = false);
+bool Remove(const std::string &path, bool silent = false);
 
 bool IsSecure(const std::string &path);
 

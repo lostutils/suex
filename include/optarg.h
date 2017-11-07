@@ -2,6 +2,7 @@
 #include <getopt.h>
 #include <perm.h>
 #include <utils.h>
+#include <gsl/span>
 #include <iostream>
 #include <regex>
 #include <vector>
@@ -14,7 +15,7 @@ class OptArgs {
  public:
   OptArgs(int argc, char *argv[]);
 
-  char *const *CommandArguments() const { return args_.data(); }
+  const std::vector<char *> &CommandArguments() const { return args_; }
 
   const std::string &ConfigPath() const { return config_path_; }
 

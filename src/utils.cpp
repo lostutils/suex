@@ -1,19 +1,21 @@
 #include <exceptions.h>
 #include <logger.h>
-#include <optarg.h>
+#include <gsl/gsl>
 #include <iomanip>
 
-using namespace suex;
-using namespace suex::optargs;
-using namespace suex::permissions;
-using namespace suex::utils;
+using suex::permissions::User;
 
-std::string utils::CommandArgsText(char *const *cmdargv) {
+std::string utils::CommandArgsText(const std::vector<char *> &cmdargv) {
   std::stringstream ss;
-  for (int i = 0; cmdargv[i] != nullptr; ++i) {
-    std::string suffix = cmdargv[i + 1] != nullptr ? " " : "";
-    ss << cmdargv[i] << suffix;
+
+  auto span = gsl::make_span(cmdargv);
+
+  for (char *q : span.subspan(0, cmdargv.size() - 2)) {
+    ss << q << " ";
   }
+
+  ss << span[cmdargv.size() - 2];
+
   return ss.str();
 }
 
