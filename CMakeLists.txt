@@ -29,12 +29,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-set(CMAKE_CXX_FLAGS "-O0 -Wall -Werror")
+set(CMAKE_CXX_FLAGS "-O0 -Wall -Werror -Wno-c++1z-extensions")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
 
-file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.*pp")
+file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.*pp" "deps/gsl/*")
 include_directories(include deps)
 add_executable(suex ${SOURCE_FILES})
 
@@ -55,6 +55,17 @@ add_custom_target(secure
         COMMAND chmod a+x ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
         COMMAND chmod u+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
         COMMAND chmod g+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex)
+
+add_custom_target(distclean
+        COMMAND rm -rvf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMAND rm -rvf ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+        COMMAND rm -rvf ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+        COMMAND rm -rvf ${CMAKE_CURRENT_BINARY_DIR}
+        )
+set_property(
+        TARGET suex
+        PROPERTY CXX_CLANG_TIDY clang-tidy;-checks=*,-llvm*,-android*
+)
 
 install(FILES ${CMAKE_SOURCE_DIR}/man/suex.1 DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1)
 install(FILES ${CMAKE_SOURCE_DIR}/man/suex.conf.5 DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man5)
