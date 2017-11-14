@@ -19,10 +19,9 @@ const std::string utils::path::Locate(const std::string &path,
     throw suex::IOError("path '%s' is empty", path.c_str());
   }
 
-  struct stat fstat {};
-  std::string fullpath{Real(path)};
-  if (stat(fullpath.c_str(), &fstat) == 0 && S_ISREG(fstat.st_mode)) {
-    return fullpath;
+  struct stat st {};
+  if (stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode)) {
+    return path;
   }
 
   std::string name(basename(path.c_str()));
@@ -30,8 +29,8 @@ const std::string utils::path::Locate(const std::string &path,
     std::istringstream iss(env::Get("PATH"));
     std::string dir;
     while (getline(iss, dir, ':')) {
-      fullpath = Real(StringFormat("%s/%s", dir.c_str(), name.c_str()));
-      if (stat(fullpath.c_str(), &fstat) == 0 && S_ISREG(fstat.st_mode)) {
+      std::string fullpath{StringFormat("%s/%s", dir.c_str(), name.c_str())};
+      if (stat(fullpath.c_str(), &st) == 0 && S_ISREG(st.st_mode)) {
         return fullpath;
       }
     }
