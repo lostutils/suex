@@ -11,18 +11,11 @@ namespace suex::permissions {
 #define MAX_LINE 65535
 #define MAX_FILE_SIZE 8192
 
-static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
-
-static auto line_re_ = std::regex(
-    R"(^(permit|deny)\s+((.*)\s+)?((:)?[a-z_][a-z0-9_-]*[$]?)\s+as\s+([a-z_][a-z0-9_-]*[$]?)\s+cmd\s+([^\s]+)(\s+args\s+(([^\s].*[^\s])[\s]*))?\s*$)");
-
-static auto comment_re_ = std::regex(R"(^[\t|\s]*#.*)");
-
-static auto empty_re_ = std::regex(R"(^[\t|\s]*)");
-
-// match ' or " but not \' and \"
-// if that looks weird, a full explanation in the cpp file
-static auto quote_re_ = std::regex(R"(('|")(?!\\))");
+const std::regex &PermissionsOptionsRegex();
+const std::regex &PermissionLineRegex();
+const std::regex &CommentLineRegex();
+const std::regex &EmptyLineRegex();
+const std::regex &QuoteLineRegex();
 
 class Permissions {
  private:

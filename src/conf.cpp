@@ -110,19 +110,19 @@ void Permissions::ParseLine(int lineno, const std::string &line,
 
   std::smatch matches;
   //  a comment, no need to parse
-  if (std::regex_match(line, matches, comment_re_)) {
+  if (std::regex_match(line, matches, CommentLineRegex())) {
     logger::debug() << "line " << lineno << " is a comment, skipping."
                     << std::endl;
     return;
   }
 
   //  an empty line, no need to parse
-  if (std::regex_match(line, matches, empty_re_)) {
+  if (std::regex_match(line, matches, EmptyLineRegex())) {
     logger::debug() << "line " << lineno << " is empty, skipping." << std::endl;
     return;
   }
 
-  if (!std::regex_search(line, matches, line_re_)) {
+  if (!std::regex_search(line, matches, PermissionLineRegex())) {
     logger::debug() << "couldn't parse: " << line << std::endl;
     throw suex::ConfigError("line invalid");
   }
@@ -134,8 +134,8 @@ void Permissions::ParseLine(int lineno, const std::string &line,
   Entity::HashTable env_to_add;
   const std::string opts{matches[3].str()};
   std::smatch opt_matches;
-  for (auto it = opts.cbegin();
-       std::regex_search(it, opts.cend(), opt_matches, opt_re_);
+  for (auto it = opts.cbegin(); std::regex_search(it, opts.cend(), opt_matches,
+                                                  PermissionsOptionsRegex());
        it += opt_matches.position() + opt_matches.length()) {
     std::string opt_match{opt_matches.str()};
     if (opt_match == "nopass") {
@@ -176,7 +176,7 @@ void Permissions::ParseLine(int lineno, const std::string &line,
       // instead, the regex has been reversed to look ahead.
       // this whole thing isn't too costly because the lines are short.
       std::reverse(cmd_args.begin(), cmd_args.end());
-      cmd_args = std::regex_replace(cmd_args, quote_re_, "");
+      cmd_args = std::regex_replace(cmd_args, QuoteLineRegex(), "");
       std::reverse(cmd_args.begin(), cmd_args.end());
 
       cmd_re += R"(\s+)" + cmd_args;
@@ -295,4 +295,27 @@ void Permissions::Parse(const std::string &path, bool only_user) {
                                  true, ".+");
     perms_.emplace(perms_.begin(), p);
   }
+}
+const std::regex & ::suex::permissions::PermissionsOptionsRegex() {
+  static const std::regex re{R"(nopass|persist|keepenv|setenv\s\{.*\})"};
+  return re;
+}
+const std::regex & ::suex::permissions::PermissionLineRegex() {
+  static const std::regex re{
+      R"(^(permit|deny)\s+((.*)\s+)?((:)?[a-z_][a-z0-9_-]*[$]?)\s+as\s+([a-z_][a-z0-9_-]*[$]?)\s+cmd\s+([^\s]+)(\s+args\s+(([^\s].*[^\s])[\s]*))?\s*$)"};
+  return re;
+}
+const std::regex & ::suex::permissions::CommentLineRegex() {
+  static const std::regex re{R"(^[\t|\s]*#.*)"};
+  return re;
+}
+const std::regex & ::suex::permissions::EmptyLineRegex() {
+  static const std::regex re{R"(^[\t|\s]*)"};
+  return re;
+}
+const std::regex & ::suex::permissions::QuoteLineRegex() {
+  // match ' or " but not \' and \"
+  // if that looks weird, a full explanation in the cpp file
+  static const std::regex re{R"(('|")(?!\\))"};
+  return re;
 }
