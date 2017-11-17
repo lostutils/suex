@@ -185,6 +185,10 @@ void Group::Initialize(const struct group *gr) {
   gid_ = gr->gr_gid;
   name_ = std::string(gr->gr_name);
 
+  if (RunningUser().GroupId() == gid_) {
+    members_.emplace(RunningUser());
+  }
+
   for (auto it = gr->gr_mem; (*it) != nullptr; it++) {
     members_.emplace(User(*it));
   }
