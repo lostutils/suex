@@ -34,12 +34,14 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
 
-file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.*pp" "deps/gsl/*")
-include_directories(include deps)
+# --- build ---
+
+file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.*pp" "deps/gsl/*" "deps/re2/re2/*.h" )
+include_directories(include deps deps/re2)
 add_executable(suex ${SOURCE_FILES})
 
 # suex depends on libpam and libdw
-target_link_libraries(suex pam dw)
+target_link_libraries(suex pthread libre2 pam dw)
 
 # generating man pages from markdown using ronn
 add_custom_command(TARGET suex POST_BUILD
@@ -50,18 +52,6 @@ add_custom_command(TARGET suex POST_BUILD
         COMMAND ronn -r suex.conf.md
         COMMAND mv -f suex.5 suex.conf.5)
 
-add_custom_target(secure
-        COMMAND chown root:root ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
-        COMMAND chmod a+x ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
-        COMMAND chmod u+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
-        COMMAND chmod g+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex)
-
-add_custom_target(distclean
-        COMMAND rm -rvf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        COMMAND rm -rvf ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-        COMMAND rm -rvf ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-        COMMAND rm -rvf ${CMAKE_CURRENT_BINARY_DIR}
-        )
 set_property(
         TARGET suex
         PROPERTY CXX_CLANG_TIDY clang-tidy;-checks=*,-llvm*,-android*
@@ -75,6 +65,23 @@ install(FILES ${CMAKE_SOURCE_DIR}/doc/suex.conf DESTINATION /etc/
 install(TARGETS suex
         PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_EXECUTE SETUID SETGID
         RUNTIME DESTINATION bin)
+
+# --- custom targets ---
+
+add_custom_target(secure
+        COMMAND chown root:root ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
+        COMMAND chmod a+x ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
+        COMMAND chmod u+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
+        COMMAND chmod g+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex)
+
+add_custom_target(distclean
+        COMMAND rm -rvf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        COMMAND rm -rvf ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+        COMMAND rm -rvf ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+        COMMAND rm -rvf ${CMAKE_CURRENT_BINARY_DIR}
+        )
+
+# --- packaging ---
 
 set(CPACK_GENERATOR "RPM;DEB")
 set(CPACK_SYSTEM_NAME "linux-${CPU_ARCH}")
@@ -90,3 +97,29 @@ set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${CPU_ARCH}")
 set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_SOURCE_DIR}/pkg")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 include(CPack)
+
+# --- google re2 ---
+
+set(RE2_ROOT_DIR ${CMAKE_SOURCE_DIR}/deps/re2)
+set(RE2_BINARY_DIR ${CMAKE_BINARY_DIR}/re2)
+ExternalProject_Add(re2
+        URL ${RE2_ROOT_DIR}
+        CONFIGURE_COMMAND ""
+
+        PREFIX ${RE2_BINARY_DIR}
+        TMP_DIR ${RE2_BINARY_DIR}/tmp
+        STAMP_DIR ${RE2_BINARY_DIR}/stamp
+        BINARY_DIR ${RE2_BINARY_DIR}/re2
+        SOURCE_DIR ${RE2_BINARY_DIR}/re2
+        INSTALL_DIR ${RE2_BINARY_DIR}
+
+        BUILD_COMMAND $(MAKE)
+        INSTALL_COMMAND $(MAKE) DESTDIR=${RE2_ROOT_DIR} install
+        )
+
+add_library(libre2 STATIC IMPORTED)
+set_property(TARGET libre2 PROPERTY IMPORTED_LOCATION ${RE2_ROOT_DIR}/lib/libre2.a)
+add_dependencies(libre2 re2)
+
+#------------ end of google libre2 ------------------
+
