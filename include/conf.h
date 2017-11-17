@@ -14,7 +14,7 @@ namespace suex::permissions {
 static auto opt_re_ = std::regex(R"(nopass|persist|keepenv|setenv\s\{.*\})");
 
 static auto line_re_ = std::regex(
-    R"(^(permit|deny)\s((.*)\s)?((:)?[a-z_][a-z0-9_-]*[$]?)\sas\s([a-z_][a-z0-9_-]*[$]?)\scmd\s([^\s]+)(\sargs\s(([^\s].*[^\s])[\s]*))?$)");
+    R"(^(permit|deny)\s+((.*)\s+)?((:)?[a-z_][a-z0-9_-]*[$]?)\s+as\s+([a-z_][a-z0-9_-]*[$]?)\s+cmd\s+([^\s]+)(\s+args\s+(([^\s].*[^\s])[\s]*))?\s*$)");
 
 static auto comment_re_ = std::regex(R"(^[\t|\s]*#.*)");
 
