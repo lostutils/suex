@@ -21,14 +21,14 @@ std::string utils::CommandArgsText(const std::vector<char *> &cmdargv) {
 
 bool utils::BypassPermissions(const User &as_user) {
   // if the user / grp is root, just let them run.
-  if (running_user.Id() == 0 && running_user.GroupId() == 0) {
+  if (RunningUser().Id() == 0 && RunningUser().GroupId() == 0) {
     return true;
   }
 
   // if the user / grp are the same as the running user,
   // just run the app without performing any operations
-  return running_user.Id() == as_user.Id() &&
-         running_user.GroupId() == as_user.GroupId();
+  return RunningUser().Id() == as_user.Id() &&
+         RunningUser().GroupId() == as_user.GroupId();
 }
 
 const std::string utils::Iso8601() {
@@ -67,4 +67,19 @@ bool utils::AskQuestion(const std::string &prompt) {
   std::smatch base_match;
   std::regex rx{"y|yes", std::regex_constants::icase};
   return std::regex_match(ans, base_match, rx);
+}
+
+const suex::permissions::User &RunningUser() {
+  static const suex::permissions::User user{getuid()};
+  return user;
+}
+
+const suex::permissions::User &RootUser() {
+  static const suex::permissions::User user{0};
+  return user;
+}
+
+const suex::permissions::Group &WheelGroup() {
+  static const suex::permissions::Group grp{"wheel"};
+  return grp;
 }

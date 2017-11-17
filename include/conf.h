@@ -44,7 +44,7 @@ class Permissions {
   std::string AuthStyle() const { return auth_style_; }
 
   bool Privileged() const {
-    return wheel_group.Contains(running_user) || running_user == root_user;
+    return WheelGroup().Contains(RunningUser()) || RunningUser() == RootUser();
   }
 
   const Entity *Get(const User &user, const std::vector<char *> &cmdargv) const;

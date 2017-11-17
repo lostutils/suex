@@ -185,7 +185,7 @@ void Permissions::ParseLine(int lineno, const std::string &line,
     // populate the permissions vector
     std::vector<User> users;
     for (const User &user : GetUsers(matches[4], &users)) {
-      if (only_user && user.Id() != running_user.Id()) {
+      if (only_user && user.Id() != RunningUser().Id()) {
         logger::debug() << "skipping user '" << user.Name()
                         << "' - only user mode" << std::endl;
       }
@@ -291,7 +291,7 @@ void Permissions::Parse(const std::string &path, bool only_user) {
   // if the user is privileged, add an "all rule" to the
   // beginning of the permissions vector
   if (Privileged()) {
-    auto p = permissions::Entity(running_user, root_user, false, true, false,
+    auto p = permissions::Entity(RunningUser(), RootUser(), false, true, false,
                                  true, ".+");
     perms_.emplace(perms_.begin(), p);
   }

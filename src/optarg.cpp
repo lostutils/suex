@@ -75,7 +75,7 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
         break;
       }
       case 's': {
-        std::string shell{running_user.Shell()};
+        std::string shell{RunningUser().Shell()};
         if (env::Contains("SHELL")) {
           shell = env::Get("SHELL");
         }

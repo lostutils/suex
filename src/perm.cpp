@@ -1,7 +1,5 @@
 #include <exceptions.h>
-#include <grp.h>
 #include <logger.h>
-#include <pwd.h>
 
 using suex::permissions::Entity;
 using suex::permissions::User;
@@ -22,7 +20,7 @@ std::ostream &permissions::operator<<(std::ostream &os, const Entity &entity) {
 }
 
 bool Entity::CanExecute(const User &user, const std::string &cmd) const {
-  if (Owner().Id() != running_user.Id()) {
+  if (Owner().Id() != RunningUser().Id()) {
     return false;
   }
 
@@ -72,16 +70,20 @@ void permissions::Set(const User &user) {
   }
 }
 
-User::User(uid_t uid) : uid_{-1} {
-  struct passwd *pw = getpwuid(uid);
-  if (pw == nullptr) {
-    return;
-  }
+void User::Initialize(const struct passwd *pw) {
   uid_ = pw->pw_uid;
   name_ = pw->pw_name;
   gid_ = pw->pw_gid;
   home_dir_ = pw->pw_dir;
   shell_ = pw->pw_shell;
+}
+
+User::User(uid_t uid) : uid_{-1} {
+  struct passwd *pw = getpwuid(uid);
+  if (pw == nullptr) {
+    return;
+  }
+  Initialize(pw);
 }
 
 User::User(const std::string &user) : name_{user}, uid_{-1} {
@@ -91,7 +93,7 @@ User::User(const std::string &user) : name_{user}, uid_{-1} {
 
   // if both fail, also try to load the user as a uid.
   const struct passwd *pw =
-      user.empty() ? getpwuid(static_cast<uid_t>(running_user.Id()))
+      user.empty() ? getpwuid(static_cast<uid_t>(RunningUser().Id()))
                    : getpwnam(user.c_str());
 
   if (pw == nullptr) {
@@ -106,11 +108,8 @@ User::User(const std::string &user) : name_{user}, uid_{-1} {
       return;
     }
   }
-  uid_ = pw->pw_uid;
-  name_ = pw->pw_name;
-  gid_ = pw->pw_gid;
-  home_dir_ = pw->pw_dir;
-  shell_ = pw->pw_shell;
+
+  Initialize(pw);
 }
 
 User::User(const User &user) {
@@ -138,11 +137,7 @@ Group::Group(gid_t gid) : gid_{-1} {
   if (gr == nullptr) {
     return;
   }
-  gid_ = gr->gr_gid;
-  name_ = gr->gr_name;
-  for (auto it = gr->gr_mem; (*it) != nullptr; it++) {
-    members_.emplace(User(*it));
-  }
+  Initialize(gr);
 }
 
 Group::Group(const std::string &grp) : name_{grp}, gid_{-1} {
@@ -170,12 +165,9 @@ Group::Group(const std::string &grp) : name_{grp}, gid_{-1} {
     }
   }
 
-  gid_ = gr->gr_gid;
-  name_ = std::string(gr->gr_name);
-  for (auto it = gr->gr_mem; (*it) != nullptr; it++) {
-    members_.emplace(User(*it));
-  }
+  Initialize(gr);
 }
+
 bool Group::operator==(const Group &other) const { return gid_ == other.gid_; }
 bool Group::operator!=(const Group &other) const { return !(other == *this); }
 
@@ -188,3 +180,12 @@ bool Group::operator<(const Group &other) const { return gid_ < other.gid_; }
 bool Group::operator>(const Group &other) const { return other < *this; }
 bool Group::operator<=(const Group &other) const { return !(other < *this); }
 bool Group::operator>=(const Group &other) const { return !(*this < other); }
+
+void Group::Initialize(const struct group *gr) {
+  gid_ = gr->gr_gid;
+  name_ = std::string(gr->gr_name);
+
+  for (auto it = gr->gr_mem; (*it) != nullptr; it++) {
+    members_.emplace(User(*it));
+  }
+}

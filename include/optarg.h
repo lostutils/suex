@@ -50,6 +50,6 @@ class OptArgs {
   bool interactive_{true};
   bool clear_{false};
   bool verbose_mode_{false};
-  permissions::User user_{root_user};
+  permissions::User user_{RootUser()};
 };
 }

@@ -16,7 +16,7 @@ using suex::optargs::OptArgs;
 
 void suex::ShowPermissions(const permissions::Permissions &permissions) {
   for (const permissions::Entity &e : permissions) {
-    if (e.Owner().Id() != running_user.Id() && !permissions.Privileged()) {
+    if (e.Owner().Id() != RunningUser().Id() && !permissions.Privileged()) {
       continue;
     }
 
@@ -122,7 +122,7 @@ void suex::EditConfiguration(const OptArgs &opts,
 
     // child process should run the editor
     if (pid == 0) {
-      suex::SwitchUserAndExecute(root_user, cmdargv.data(), suex::env::Raw());
+      suex::SwitchUserAndExecute(RootUser(), cmdargv.data(), suex::env::Raw());
     }
 
     // parent process should wait until the child exists

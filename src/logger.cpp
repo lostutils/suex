@@ -22,7 +22,7 @@ const std::string TypeName(Type type) {
   }
 }
 
-Logger::Logger(Type type) : type_(type), user_(running_user) {}
+Logger::Logger(Type type) : type_(type), user_(RunningUser()) {}
 
 Logger::Logger(const Logger &other) : type_{other.type_} {
   std::string type{TypeName(other.type_)};

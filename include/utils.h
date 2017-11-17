@@ -9,9 +9,9 @@
 #include <gsl/span>
 #include <iostream>
 
-static const auto running_user = suex::permissions::User(getuid());
-static const auto root_user = suex::permissions::User(0);
-static const auto wheel_group = suex::permissions::Group("wheel");
+const suex::permissions::User &RunningUser();
+const suex::permissions::User &RootUser();
+const suex::permissions::Group &WheelGroup();
 
 #define CONCAT_(a, b) a##b
 #define CONCAT(a, b) CONCAT_(a, b)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <grp.h>
+#include <pwd.h>
 #include <regex>
 #include <set>
 #include <string>
@@ -48,6 +50,7 @@ class User {
   int gid_{-1};
   std::string home_dir_;
   std::string shell_;
+  void Initialize(const struct passwd *pw);
 };
 
 class Group {
@@ -56,6 +59,7 @@ class Group {
   std::string name_;
   int gid_{-1};
   std::set<User> members_;
+  void Initialize(const struct group *gr);
 
  public:
   typedef Collection::const_iterator const_iterator;
@@ -109,8 +113,8 @@ class Entity {
         keepenv_{keepenv},
         persist_{persist},
         cmd_re_txt_{cmd_re},
-        env_to_add_{std::move(env_to_add)},
-        env_to_remove{std::move(env_to_remove)},
+        env_to_add_{env_to_add},
+        env_to_remove{env_to_remove},
         cmd_re_{cmd_re} {}
 
   explicit Entity(const User &user, const User &as_user, bool deny,

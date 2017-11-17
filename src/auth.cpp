@@ -14,7 +14,7 @@ struct auth_data {
 };
 
 std::string GetTokenPrefix(const std::string &style) {
-  std::string text{style + "__" + running_user.Name()};
+  std::string text{style + "__" + RunningUser().Name()};
   return std::to_string(std::hash<std::string>{}(text));
 }
 
@@ -89,7 +89,7 @@ int PamConversation(int num_msg, const struct pam_message **msg,
   }
 
   std::string prompt{utils::StringFormat("[suex] password for %s: ",
-                                         running_user.Name().c_str())};
+                                         RunningUser().Name().c_str())};
   auth_data->pam_resp->resp = getpass(prompt.c_str());
   auth_data->pam_resp->resp_retcode = 0;
   *resp = auth_data->pam_resp;
@@ -158,7 +158,7 @@ bool auth::Authenticate(const std::string &style, bool prompt,
   const struct pam_conv pam_conversation = {PamConversation, &data};
   pam_handle_t *handle = nullptr;  // this gets set by pam_start
 
-  int retval = pam_start(style.c_str(), running_user.Name().c_str(),
+  int retval = pam_start(style.c_str(), RunningUser().Name().c_str(),
                          &pam_conversation, &handle);
 
   if (retval != PAM_SUCCESS) {

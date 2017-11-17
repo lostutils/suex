@@ -151,8 +151,8 @@ int main(int argc, char *argv[]) {
   backward::SignalHandling sh;
 
   try {
-    if (static_cast<int>(geteuid()) != root_user.Id() ||
-        static_cast<int>(getegid()) != root_user.GroupId()) {
+    if (static_cast<int>(geteuid()) != RootUser().Id() ||
+        static_cast<int>(getegid()) != RootUser().GroupId()) {
       throw suex::PermissionError("suex setid & setgid are no set", geteuid(),
                                   getegid());
     }
