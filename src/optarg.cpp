@@ -24,7 +24,7 @@ int OptArgs::GetArgumentCount(int argc, char *argv[]) {
 
   auto sp = gsl::make_span(argv, argc).subspan(1);
   std::string prevopt{};
-  int counter = 1;
+  int counter{0};
   for (std::string opt : sp) {
     counter++;
     prevopt = opt;
