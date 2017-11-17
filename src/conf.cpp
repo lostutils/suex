@@ -54,17 +54,20 @@ void ProcessEnv(const std::string &txt, Entity::HashTable *upsert,
 
 const std::vector<User> &GetUsers(const std::string &user,
                                   std::vector<User> *users) {
-  if (user[0] == ':') {
-    Group grp{user.substr(1, user.npos)};
-    if (!grp.Exists()) {
-      throw suex::PermissionError("group %s doesn't exist", grp.Name().c_str());
-    }
-    for (auto mem : grp) {
-      users->emplace_back(mem);
-    }
-  } else {
+  if (user[0] != ':') {
     users->emplace_back(User(user));
+    return *users;
   }
+
+  Group grp{user.substr(1, user.npos)};
+  if (!grp.Exists()) {
+    throw suex::PermissionError("group %s doesn't exist", grp.Name().c_str());
+  }
+
+  for (auto mem : grp) {
+    users->emplace_back(mem);
+  }
+
   return *users;
 }
 
