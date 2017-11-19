@@ -1,11 +1,11 @@
 #include <actions.h>
 #include <auth.h>
 #include <exceptions.h>
-
 #include <file.h>
 #include <logger.h>
 #include <version.h>
 #include <wait.h>
+#include <sstream>
 
 using suex::permissions::Permissions;
 using suex::permissions::User;

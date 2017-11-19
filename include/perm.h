@@ -2,7 +2,7 @@
 
 #include <grp.h>
 #include <pwd.h>
-#include <regex>
+#include <re2/include/re2/re2.h>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -56,6 +56,7 @@ class User {
 class Group {
  private:
   typedef std::set<User> Collection;
+
   std::string name_;
   int gid_{-1};
   std::set<User> members_;
@@ -99,12 +100,24 @@ class Group {
 
 class Entity {
  public:
-  typedef std::set<std::string> Collection;
-  typedef std::unordered_map<std::string, std::string> HashTable;
+  typedef std::set<std::string> EnvToRemove;
+  typedef std::unordered_map<std::string, std::string> EnvToAdd;
+
+  explicit Entity(const User &user, const User &as_user, bool deny,
+                  bool keepenv, bool nopass, bool persist, EnvToAdd env_to_add,
+                  EnvToRemove env_to_remove, const std::string &cmd_re)
+      : user_{user},
+        as_user_{as_user},
+        deny_{deny},
+        nopass_{nopass},
+        keepenv_{keepenv},
+        persist_{persist},
+        cmd_re{cmd_re},
+        env_to_add_{std::move(env_to_add)},
+        env_to_remove{std::move(env_to_remove)} {}
 
   explicit Entity(const User &user, const User &as_user, bool deny,
                   bool keepenv, bool nopass, bool persist,
-                  const HashTable &env_to_add, const Collection &env_to_remove,
                   const std::string &cmd_re)
       : user_{user},
         as_user_{as_user},
@@ -112,24 +125,9 @@ class Entity {
         nopass_{nopass},
         keepenv_{keepenv},
         persist_{persist},
-        cmd_re_txt_{cmd_re},
-        env_to_add_{env_to_add},
-        env_to_remove{env_to_remove},
-        cmd_re_{cmd_re} {}
-
-  explicit Entity(const User &user, const User &as_user, bool deny,
-                  bool keepenv, bool nopass, bool persist,
-                  const std::string &cmd_re)
-      : user_{user},
-        as_user_{as_user},
-        deny_{deny},
-        nopass_{nopass},
-        keepenv_{keepenv},
-        persist_{persist},
-        cmd_re_txt_{cmd_re},
+        cmd_re{cmd_re},
         env_to_add_{},
-        env_to_remove{},
-        cmd_re_{cmd_re} {}
+        env_to_remove{} {}
 
   const User &Owner() const { return user_; };
 
@@ -149,7 +147,7 @@ class Entity {
     return env_to_add_.find(env) != env_to_add_.end();
   }
 
-  const HashTable EnvVarsToAdd() const { return env_to_add_; }
+  const EnvToAdd EnvVarsToAdd() const { return env_to_add_; }
 
   bool ShouldRemoveEnvVar(const std::string &env) const {
     return env_to_remove.find(env) != env_to_remove.end();
@@ -159,7 +157,7 @@ class Entity {
 
   bool CanExecute(const User &user, const std::string &cmd) const;
 
-  const std::string &Command() const { return cmd_re_txt_; };
+  const std::string &Command() const { return cmd_re; };
 
  private:
   User user_;
@@ -168,10 +166,9 @@ class Entity {
   bool nopass_{false};
   bool keepenv_{false};
   bool persist_{false};
-  std::string cmd_re_txt_;
-  HashTable env_to_add_;
-  Collection env_to_remove;
-  std::regex cmd_re_;
+  std::string cmd_re;
+  EnvToAdd env_to_add_;
+  EnvToRemove env_to_remove;
 };
 void Set(const User &user);
 std::ostream &operator<<(std::ostream &os, const Entity &entity);

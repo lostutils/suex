@@ -3,7 +3,9 @@
 #include <file.h>
 #include <glob.h>
 #include <logger.h>
+#include <rx.h>
 #include <gsl/gsl>
+#include <sstream>
 
 using suex::permissions::Entity;
 using suex::permissions::Permissions;
@@ -11,8 +13,8 @@ using suex::permissions::User;
 using suex::permissions::Group;
 using suex::permissions::Group;
 
-void ProcessEnv(const std::string &txt, Entity::HashTable *upsert,
-                Entity::Collection *remove) {
+void ProcessEnv(const std::string &txt, Entity::EnvToAdd *upsert,
+                Entity::EnvToRemove *remove) {
   uint64_t openTokenIdx = txt.find_first_of('{');
   uint64_t closeTokenIdx = txt.find_last_of('}');
 
@@ -106,88 +108,104 @@ const std::vector<std::string> &GetExecutables(const std::string &glob_pattern,
   return *vec;
 }
 
+std::string ParseCommand(const std::string &cmd, const std::string &args) {
+  if (args.empty()) {
+    return cmd;
+  }
+  std::string whitespace{R"(\s)"};
+  std::ostringstream ss;
+  ss << cmd.c_str() << whitespace.c_str();
+  bool escaped = false;
+  for (const auto &c : args) {
+    // remove quotes from non-escaped sequences
+    if (!escaped && (c == '\'' || c == '"')) {
+      continue;
+    }
+    if (c == ' ') {
+      ss << whitespace.c_str();
+      continue;
+    }
+
+    escaped = c == '\\';
+    ss << c;
+  }
+  return ss.str();
+};
+
+void ParseOptions(const std::string &options, bool *nopass, bool *keepenv,
+                  bool *persist, Entity::EnvToAdd *env_to_add,
+                  Entity::EnvToRemove *env_to_remove) {
+  if (options.empty()) {
+    return;
+  }
+  std::string opt_match{};
+  re2::StringPiece sp{options};
+  while (re2::RE2::FindAndConsume(&sp, permissions::PermissionsOptionsRegex(),
+                                  &opt_match)) {
+    if (opt_match == "nopass") {
+      *nopass = true;
+    }
+    if (opt_match == "keepenv") {
+      *keepenv = true;
+    }
+    if (opt_match == "persist") {
+      *persist = true;
+    }
+    if (opt_match.find("setenv") == 0) {
+      ProcessEnv(opt_match, env_to_add, env_to_remove);
+    }
+  }
+}
+
 void Permissions::ParseLine(int lineno, const std::string &line,
                             bool only_user) {
   logger::debug() << "parsing line " << lineno << ": '" << line << "'"
                   << std::endl;
 
-  std::smatch matches;
   //  a comment, no need to parse
-  if (std::regex_match(line, matches, CommentLineRegex())) {
+  if (re2::RE2::FullMatch(line, CommentLineRegex())) {
     logger::debug() << "line " << lineno << " is a comment, skipping."
                     << std::endl;
     return;
   }
 
   //  an empty line, no need to parse
-  if (std::regex_match(line, matches, EmptyLineRegex())) {
+  if (re2::RE2::FullMatch(line, EmptyLineRegex())) {
     logger::debug() << "line " << lineno << " is empty, skipping." << std::endl;
     return;
   }
 
-  if (!std::regex_search(line, matches, PermissionLineRegex())) {
+  utils::rx::Matches m;
+  if (!utils::rx::NamedFullMatch(PermissionLineRegex(), line, &m)) {
     logger::debug() << "couldn't parse: " << line << std::endl;
     throw suex::ConfigError("line invalid");
   }
 
-  bool deny = matches[1] == "deny";
   bool nopass{false}, keepenv{false}, persist{false};
+  Entity::EnvToRemove env_to_remove;
+  Entity::EnvToAdd env_to_add;
+  ParseOptions(m["options"], &nopass, &keepenv, &persist, &env_to_add,
+               &env_to_remove);
 
-  Entity::Collection env_to_remove;
-  Entity::HashTable env_to_add;
-  const std::string opts{matches[3].str()};
-  std::smatch opt_matches;
-  for (auto it = opts.cbegin(); std::regex_search(it, opts.cend(), opt_matches,
-                                                  PermissionsOptionsRegex());
-       it += opt_matches.position() + opt_matches.length()) {
-    std::string opt_match{opt_matches.str()};
-    if (opt_match == "nopass") {
-      nopass = true;
-    }
-    if (opt_match == "keepenv") {
-      keepenv = true;
-    }
-    if (opt_match == "persist") {
-      persist = true;
-    }
-    if (opt_match.find("setenv") == 0) {
-      ProcessEnv(opt_match, &env_to_add, &env_to_remove);
-    }
-  }
+  bool deny = m["type"] == "deny";
 
   // extract the destination user
-  User as_user = User(matches[6]);
+  User as_user = User(m["as"]);
   if (!as_user.Exists()) {
     throw suex::PermissionError("destination user '%s' doesn't exist",
                                 as_user.Name().c_str());
   }
 
   // disallow running any cmd as root with nopass
-  std::string cmd_binary_{matches[7].str()};
-  if (cmd_binary_.empty() && nopass && as_user.Id() == 0) {
+  if (m["cmd"].empty() && nopass && as_user.Id() == 0) {
     throw suex::PermissionError("cmd doesn't exist but nopass is set");
   }
 
   std::vector<std::string> binaries;
-  for (const auto &exe : GetExecutables(cmd_binary_, &binaries)) {
-    // parse the args
-    std::string cmd_args{matches[10].str()};
-    std::string cmd_re{exe};
-    if (!cmd_args.empty()) {
-      // the regex is reversed because c++11 doesn't support negative
-      // lookbehind.
-      // instead, the regex has been reversed to look ahead.
-      // this whole thing isn't too costly because the lines are short.
-      std::reverse(cmd_args.begin(), cmd_args.end());
-      cmd_args = std::regex_replace(cmd_args, QuoteLineRegex(), "");
-      std::reverse(cmd_args.begin(), cmd_args.end());
-
-      cmd_re += R"(\s+)" + cmd_args;
-    }
-
+  for (const auto &exe : GetExecutables(m["cmd"], &binaries)) {
     // populate the permissions vector
     std::vector<User> users;
-    for (const User &user : GetUsers(matches[4], &users)) {
+    for (const User &user : GetUsers(m["user"], &users)) {
       if (only_user && user.Id() != RunningUser().Id()) {
         logger::debug() << "skipping user '" << user.Name()
                         << "' - only user mode" << std::endl;
@@ -198,6 +216,8 @@ void Permissions::ParseLine(int lineno, const std::string &line,
                                     user.Name().c_str());
       }
 
+      // parse the args
+      std::string cmd_re{ParseCommand(exe, m["args"])};
       perms_.emplace_back(permissions::Entity(user, as_user, deny, keepenv,
                                               nopass, persist, env_to_add,
                                               env_to_remove, cmd_re));
@@ -299,26 +319,32 @@ void Permissions::Parse(const std::string &path, bool only_user) {
     perms_.emplace(perms_.begin(), p);
   }
 }
-const std::regex & ::suex::permissions::PermissionsOptionsRegex() {
-  static const std::regex re{R"(nopass|persist|keepenv|setenv\s\{.*\})"};
+const re2::RE2 & ::suex::permissions::PermissionsOptionsRegex() {
+  static const re2::RE2 re{R"((nopass|persist|keepenv|setenv\s\{.*\}))"};
+  if (!re.ok()) {
+    throw std::runtime_error("permissions options regex failed to compile");
+  }
   return re;
 }
-const std::regex & ::suex::permissions::PermissionLineRegex() {
-  static const std::regex re{
-      R"(^(permit|deny)\s+((.*)\s+)?((:)?[a-z_][a-z0-9_-]*[$]?)\s+as\s+([a-z_][a-z0-9_-]*[$]?)\s+cmd\s+([^\s]+)(\s+args\s+(([^\s].*[^\s])[\s]*))?\s*$)"};
+const re2::RE2 & ::suex::permissions::PermissionLineRegex() {
+  static const re2::RE2 re{
+      R"(^(?P<type>permit|deny)\s+((?P<options>.*)\s+)?(?P<user>(:)?[a-z_][a-z0-9_-]*[$]?)\s+as\s+(?P<as>[a-z_][a-z0-9_-]*[$]?)\s+cmd\s+(?P<cmd>[^\s]+)(\s+args\s+((?P<args>[^\s].*[^\s])[\s]*))?\s*$)"};
+  if (!re.ok()) {
+    throw std::runtime_error("permissions regex failed to compile");
+  }
   return re;
 }
-const std::regex & ::suex::permissions::CommentLineRegex() {
-  static const std::regex re{R"(^[\t|\s]*#.*)"};
+const re2::RE2 & ::suex::permissions::CommentLineRegex() {
+  static const re2::RE2 re{R"(^[\t|\s]*#.*)"};
+  if (!re.ok()) {
+    throw std::runtime_error("comment regex failed to compile");
+  }
   return re;
 }
-const std::regex & ::suex::permissions::EmptyLineRegex() {
-  static const std::regex re{R"(^[\t|\s]*)"};
-  return re;
-}
-const std::regex & ::suex::permissions::QuoteLineRegex() {
-  // match ' or " but not \' and \"
-  // if that looks weird, a full explanation in the cpp file
-  static const std::regex re{R"(('|")(?!\\))"};
+const re2::RE2 & ::suex::permissions::EmptyLineRegex() {
+  static const re2::RE2 re{R"(^[\t|\s]*)"};
+  if (!re.ok()) {
+    throw std::runtime_error("empty line regex failed to compile");
+  }
   return re;
 }

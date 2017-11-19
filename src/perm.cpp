@@ -1,5 +1,6 @@
 #include <exceptions.h>
 #include <logger.h>
+#include <sstream>
 
 using suex::permissions::Entity;
 using suex::permissions::User;
@@ -27,15 +28,17 @@ bool Entity::CanExecute(const User &user, const std::string &cmd) const {
   if (AsUser().Id() != user.Id()) {
     return false;
   };
-  std::smatch matches;
-  bool matched = std::regex_match(cmd, matches, cmd_re_);
 
-  if (matched) {
-    logger::debug() << "[!] ";
+  std::string prefix;
+  DEFER(logger::debug() << prefix << cmd_re << " ~= " << cmd << std::endl);
+  // no need to pre-compile the regular expression
+  // it's evaluated only once during execution
+  if (re2::RE2::FullMatch(cmd, re2::RE2(cmd_re))) {
+    prefix = "[!] ";
+    return true;
   }
-  logger::debug() << cmd_re_txt_ << " ~= " << cmd << std::endl;
 
-  return matched;
+  return false;
 }
 
 int setgroups(const User &user) {

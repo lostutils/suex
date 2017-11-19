@@ -3,6 +3,7 @@
 #include <file.h>
 #include <path.h>
 #include <sys/sendfile.h>
+#include <cstring>
 
 void suex::file::Secure(int fd) {
   // chown root:root

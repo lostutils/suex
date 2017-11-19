@@ -1,5 +1,6 @@
 #include <env.h>
 #include <utils.h>
+#include <sstream>
 
 char **suex::env::Raw() { return environ; };
 

@@ -2,6 +2,7 @@
 #include <logger.h>
 #include <climits>
 #include <gsl/gsl>
+#include <sstream>
 
 const std::string utils::path::Real(const std::string &path) {
   char buff[PATH_MAX] = {};

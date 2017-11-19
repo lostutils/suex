@@ -64,9 +64,7 @@ bool utils::AskQuestion(const std::string &prompt) {
   std::string ans;
   std::cout << prompt << " ";
   std::getline(std::cin, ans);
-  std::smatch base_match;
-  std::regex rx{"y|yes", std::regex_constants::icase};
-  return std::regex_match(ans, base_match, rx);
+  return re2::RE2::FullMatch(ans, re2::RE2("y|yes"));
 }
 
 const suex::permissions::User &RunningUser() {
