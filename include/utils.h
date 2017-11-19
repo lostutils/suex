@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <gsl/span>
 #include <iostream>
+#include <vector>
 
 const suex::permissions::User &RunningUser();
 const suex::permissions::User &RootUser();

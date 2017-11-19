@@ -2,8 +2,8 @@
 
 #include <optarg.h>
 #include <perm.h>
+#include <re2/re2.h>
 #include <utils.h>
-#include <regex>
 #include <string>
 
 namespace suex::permissions {
@@ -11,11 +11,10 @@ namespace suex::permissions {
 #define MAX_LINE 65535
 #define MAX_FILE_SIZE 8192
 
-const std::regex &PermissionsOptionsRegex();
-const std::regex &PermissionLineRegex();
-const std::regex &CommentLineRegex();
-const std::regex &EmptyLineRegex();
-const std::regex &QuoteLineRegex();
+const RE2 &PermissionsOptionsRegex();
+const RE2 &PermissionLineRegex();
+const RE2 &CommentLineRegex();
+const RE2 &EmptyLineRegex();
 
 class Permissions {
  private:

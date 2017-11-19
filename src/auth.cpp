@@ -7,6 +7,7 @@
 
 #include <security/pam_misc.h>
 #include <gsl/gsl>
+#include <sstream>
 
 struct auth_data {
   pam_response *pam_resp;

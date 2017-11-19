@@ -4,7 +4,6 @@
 #include <utils.h>
 #include <gsl/span>
 #include <iostream>
-#include <regex>
 #include <vector>
 
 namespace suex::optargs {
