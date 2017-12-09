@@ -1,0 +1,12 @@
+#!/usr/bin/env fish
+for dir in $ROOTDIR/deps/*
+   echo "pulling changes for: "(basename $dir)
+   cd $dir
+   git checkout .
+   git pull --rebase
+end
+
+cd $ROOTDIR/deps/re2
+cmake .
+make -j (nproc)
+sudo make install
