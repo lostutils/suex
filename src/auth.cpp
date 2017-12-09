@@ -110,7 +110,7 @@ int auth::ClearTokens(const std::string &style) {
   auto paths = gsl::make_span(globbuf.gl_pathv, globbuf.gl_pathc);
   for (std::string token_path : paths) {
     logger::debug() << "clearing: " << token_path << std::endl;
-    if (file::Remove(token_path, true)) {
+    if (!file::Remove(token_path, true)) {
       return -1;
     }
   }
@@ -142,9 +142,9 @@ bool auth::Authenticate(const std::string &style, bool prompt,
     time_t ts{GetToken(ts_filename)};
     time_t now{time(nullptr)};
 
-    if (ts < 0 || now <= ts) {
+    if (ts < 0 || now < ts) {
       logger::warning() << "invalid auth timestamp: " << ts << std::endl;
-      remove(ts_filename.c_str());
+      file::Remove(ts_filename, false);
       return false;
     }
 
