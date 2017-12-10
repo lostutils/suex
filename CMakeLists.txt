@@ -36,8 +36,8 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
 
 # --- build ---
 
-file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.cpp" "deps/gsl/gsl/*")
-include_directories(include deps/gsl/include deps)
+file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.*pp" "deps/gsl/gsl/*")
+include_directories(include deps/gsl/include deps/backward-cpp deps/)
 add_executable(suex ${SOURCE_FILES})
 
 # suex depends on libpam and libdw
@@ -48,8 +48,8 @@ add_custom_command(TARGET suex POST_BUILD
         DEPENDS suex
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/man
         COMMENT "Generating man pages..."
-        COMMAND /usr/local/bin/ronn -r suex.md
-        COMMAND /usr/local/bin/ronn -r suex.conf.md
+        COMMAND ronn -r suex.md
+        COMMAND ronn -r suex.conf.md
         COMMAND mv -f suex.5 suex.conf.5)
 
 set_property(
