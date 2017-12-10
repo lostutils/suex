@@ -148,8 +148,6 @@ int Do(const Permissions &permissions, const OptArgs &opts) {
 }
 
 int main(int argc, char *argv[]) {
-  backward::SignalHandling sh;
-
   try {
     if (static_cast<int>(geteuid()) != RootUser().Id() ||
         static_cast<int>(getegid()) != RootUser().GroupId()) {

@@ -36,20 +36,20 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
 
 # --- build ---
 
-file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.*pp" "deps/gsl/*" "deps/re2/re2/*.h" )
-include_directories(include deps deps/re2)
+file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.cpp" "deps/gsl/gsl/*")
+include_directories(include deps/gsl/include deps)
 add_executable(suex ${SOURCE_FILES})
 
 # suex depends on libpam and libdw
-target_link_libraries(suex pthread libre2 pam dw)
+target_link_libraries(suex pthread re2 pam dw)
 
 # generating man pages from markdown using ronn
 add_custom_command(TARGET suex POST_BUILD
         DEPENDS suex
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/man
         COMMENT "Generating man pages..."
-        COMMAND ronn -r suex.md
-        COMMAND ronn -r suex.conf.md
+        COMMAND /usr/local/bin/ronn -r suex.md
+        COMMAND /usr/local/bin/ronn -r suex.conf.md
         COMMAND mv -f suex.5 suex.conf.5)
 
 set_property(
@@ -97,29 +97,3 @@ set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${CPU_ARCH}")
 set(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_SOURCE_DIR}/pkg")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 include(CPack)
-
-# --- google re2 ---
-
-set(RE2_ROOT_DIR ${CMAKE_SOURCE_DIR}/deps/re2)
-set(RE2_BINARY_DIR ${CMAKE_BINARY_DIR}/re2)
-ExternalProject_Add(re2
-        URL ${RE2_ROOT_DIR}
-        CONFIGURE_COMMAND ""
-
-        PREFIX ${RE2_BINARY_DIR}
-        TMP_DIR ${RE2_BINARY_DIR}/tmp
-        STAMP_DIR ${RE2_BINARY_DIR}/stamp
-        BINARY_DIR ${RE2_BINARY_DIR}/re2
-        SOURCE_DIR ${RE2_BINARY_DIR}/re2
-        INSTALL_DIR ${RE2_BINARY_DIR}
-
-        BUILD_COMMAND $(MAKE)
-        INSTALL_COMMAND $(MAKE) DESTDIR=${RE2_ROOT_DIR} install
-        )
-
-add_library(libre2 STATIC IMPORTED)
-set_property(TARGET libre2 PROPERTY IMPORTED_LOCATION ${RE2_ROOT_DIR}/lib/libre2.a)
-add_dependencies(libre2 re2)
-
-#------------ end of google libre2 ------------------
-

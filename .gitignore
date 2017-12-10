@@ -38,7 +38,7 @@
 # binary dir
 bin/
 build/
-deps/re2/lib
+deps/
 
 # man
 man/suex.1
