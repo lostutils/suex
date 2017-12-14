@@ -110,7 +110,7 @@ void suex::file::Create(const std::string &path, bool secure) {
 
   suex::file::Buffer buff(fileno(f), std::ios::out);
   std::ostream os(&buff);
-  os << "";
+  os << " ";
 
   if (secure) {
     Secure(fileno(f));
