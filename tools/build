@@ -1,2 +1,7 @@
 #!/usr/bin/env fish
+set start_time (date +%s)
+
 cd $ROOTDIR/build;and make -j (nproc)
+
+set elapsed_secs (math (date +%s) - $start_time)
+echo "build took: $elapsed_secs seconds"
