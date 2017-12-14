@@ -79,6 +79,7 @@ add_custom_target(distclean
         COMMAND rm -rvf ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
         COMMAND rm -rvf ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
         COMMAND rm -rvf ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND rm -rvf ${CMAKE_SOURCE_DIR}/.direnv
         )
 
 # --- packaging ---
