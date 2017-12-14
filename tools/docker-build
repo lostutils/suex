@@ -1,0 +1,14 @@
+#!/usr/bin/env fish
+set DIR (dirname (readlink -f (status -f)))
+set SRC_DIR (readlink -f $DIR"/..")
+
+if test (id -u) != 0
+   set x $DIR"/"(basename (status -f))
+   sudo fish $x
+   exit 0
+end
+
+docker build --rm -t suex .
+docker run -itv $SRC_DIR:$SRC_DIR -w $SRC_DIR suex bash
+chown -R $USERNAME:$USERNAME $SRC_DIR
+rm -rf $SRC_DIR/.direnv

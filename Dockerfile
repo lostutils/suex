@@ -23,5 +23,6 @@ RUN curl https://bootstrap.pypa.io/get-pip.py | python3.6
 RUN pip install virtualenv
 RUN apt install -y clang-tidy
 RUN apt install -y ruby-ronn 
+RUN apt install -y fish
 ADD entrypoint.sh /entrypoint.sh
 ENTRYPOINT /entrypoint.sh

@@ -1,4 +1,0 @@
-#!/usr/bin/env fish
-cd (dirname (readlink -f (status -f)))
-docker build --rm -t suex .
-docker run -it suex
