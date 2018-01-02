@@ -27,7 +27,6 @@ The options are as follows:
 
   * `-z`:
     Clear any persisted authorizations from previous invocations in this session, then immediately exit. No command is executed.
-    Also clears edit locks when combined with `-E'.
 
   * `-n`:
     Non interactive mode, fail if **suex** would prompt for password.

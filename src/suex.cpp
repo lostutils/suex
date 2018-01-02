@@ -18,7 +18,9 @@ void ShowUsage() {
 }
 
 void CreateRuntimeDirectories() {
-  struct stat fstat {};
+  struct stat fstat {
+    0
+  };
   if (stat(PATH_VAR_RUN, &fstat) != 0) {
     throw suex::IOError(std::strerror(errno));
   }
@@ -99,10 +101,6 @@ int Do(const Permissions &permissions, const OptArgs &opts) {
   }
 
   if (opts.EditConfig()) {
-    if (opts.Clear()) {
-      RemoveEditLock();
-    }
-
     EditConfiguration(opts, permissions);
     return 0;
   }
@@ -111,8 +109,8 @@ int Do(const Permissions &permissions, const OptArgs &opts) {
   // because the edit config command can edit invalid files
   if (permissions.Size() <= 0) {
     throw suex::PermissionError(
-        "suex.conf is either invalid or empty.\n! notice that you're not a "
-        "member of 'wheel'");
+        "suex.conf is either invalid or empty.\n"
+        "! notice that you're not a member of 'wheel'");
   }
 
   if (opts.ListPermissions()) {

@@ -74,7 +74,9 @@ const std::vector<User> &GetUsers(const std::string &user,
 }
 
 bool IsExecutable(const std::string &path) {
-  struct stat st {};
+  struct stat st {
+    0
+  };
   if (stat(path.c_str(), &st) < 0) {
     throw suex::IOError("couldn't get executable stat");
   }
@@ -84,7 +86,7 @@ bool IsExecutable(const std::string &path) {
 
 const std::vector<std::string> &GetExecutables(const std::string &glob_pattern,
                                                std::vector<std::string> *vec) {
-  glob_t globbuf{};
+  glob_t globbuf{0};
   if (glob(glob_pattern.c_str(), 0, nullptr, &globbuf) != 0) {
     logger::warning() << "there are no executables at " << glob_pattern
                       << std::endl;
@@ -292,7 +294,7 @@ void Permissions::Parse(const std::string &path, bool only_user) {
 
   if (file::Size(fileno(f)) > MAX_FILE_SIZE) {
     throw suex::PermissionError("'%s' size is %ld, which is not supported",
-                                path.c_str(), file::Size(path));
+                                path.c_str(), file::Size(fileno(f)));
   }
 
   perms_.clear();

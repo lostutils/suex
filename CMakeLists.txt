@@ -1,6 +1,4 @@
 cmake_minimum_required(VERSION 3.7)
-
-include(ExternalProject)
 project(suex)
 
 # only linux supported at the moment
@@ -54,7 +52,7 @@ add_custom_command(TARGET suex POST_BUILD
 
 set_property(
         TARGET suex
-        PROPERTY CXX_CLANG_TIDY clang-tidy;-checks=*,-llvm*,-android*
+        PROPERTY CXX_CLANG_TIDY clang-tidy;-checks=*,-llvm*,-android*,-cppcoreguidelines-pro-type-vararg
 )
 
 install(FILES ${CMAKE_SOURCE_DIR}/man/suex.1 DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1)
