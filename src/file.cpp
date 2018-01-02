@@ -59,7 +59,7 @@ void suex::file::Clone(int src_fd, int dst_fd, bool secure) {
   }
 
   if (sendfile(dst_fd, src_fd, nullptr, static_cast<size_t>(st.st_size)) <= 0) {
-    throw suex::IOError("can't source src to dst. sendfile() failed: %s",
+    throw suex::IOError("can't clone src to dst. sendfile() failed: %s",
                         std::strerror(errno));
   }
 }
