@@ -1,18 +1,17 @@
 #include <actions.h>
 #include <auth.h>
 #include <exceptions.h>
+#include <fcntl.h>
 #include <file.h>
 #include <logger.h>
 #include <version.h>
 #include <wait.h>
+#include <cstring>
 #include <sstream>
 
 using suex::permissions::Permissions;
 using suex::permissions::User;
 using suex::optargs::OptArgs;
-
-#define PATH_EDIT_LOCK PATH_VAR_RUN "/suex/edit.lock"
-#define PATH_CONFIG_TMP "/tmp/suex.conf"
 
 void suex::ShowPermissions(const permissions::Permissions &permissions) {
   for (const permissions::Entity &e : permissions) {
@@ -77,42 +76,72 @@ void suex::ClearAuthTokens(const Permissions &permissions) {
   logger::info() << "cleared " << cleared << " tokens" << std::endl;
 }
 
-void suex::RemoveEditLock() { file::Remove(PATH_EDIT_LOCK); }
-
 void suex::ShowVersion() { std::cout << "suex: " << VERSION << std::endl; }
 
 void suex::EditConfiguration(const OptArgs &opts,
                              const Permissions &permissions) {
+  int src_fd = open(PATH_CONFIG, O_RDWR);
+  if (src_fd == -1) {
+    throw suex::IOError("error opening configuration file: %s",
+                        std::strerror(errno));
+  }
+
+  DEFER(close(src_fd));
+
+  struct flock lock = {0};
+  lock.l_type = F_WRLCK;
+
+  if (fcntl(src_fd, F_OFD_SETLK, &lock) < 0) {
+    if (errno & (EACCES | EAGAIN)) {
+      throw suex::PermissionError(
+          "Configuration is being edited in another session");
+    }
+    throw suex::IOError("Error when locking configuration: %s",
+                        strerror(errno));
+  }
+
+  DEFER({
+    lock.l_type = F_UNLCK;
+    fcntl(src_fd, F_OFD_SETLKW, &lock);
+  });
+
   if (!permissions.Privileged()) {
     throw suex::PermissionError(
         "Access denied. You are not allowed to edit the config file");
-  }
-
-  // verbose is needed when editing
-  TurnOnVerboseOutput(permissions);
-
-  if (utils::path::Exists(PATH_EDIT_LOCK)) {
-    throw suex::PermissionError(
-        "suex.conf is being edited from another session");
   }
 
   if (!auth::Authenticate(permissions.AuthStyle(), true)) {
     throw suex::PermissionError("Incorrect password");
   }
 
-  file::Create(PATH_EDIT_LOCK, true);
-  file::Clone(PATH_CONFIG, PATH_CONFIG_TMP, true);
-  DEFER({
-    file::Remove(PATH_EDIT_LOCK);
-    file::Remove(PATH_CONFIG_TMP);
-  });
+  FILE *tmp_f = tmpfile();
+  if (tmp_f == nullptr) {
+    throw suex::IOError("Couldn't create a temporary configuration file");
+  }
+  DEFER(fclose(tmp_f));
+
+  int dst_fd{fileno(tmp_f)};
+
+  std::string tmp_conf{Sprintf("/proc/%d/fd/%d", getpid(), dst_fd)};
+
+  // secure the file
+  // -> copy the content
+  // -> make it rw by root:root
+  file::Clone(src_fd, dst_fd, true);
+
+  if (fchmod(dst_fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0) {
+    throw suex::PermissionError(
+        "couldn't update temp configuration file ownership: %s",
+        std::strerror(errno));
+  }
 
   std::string editor{utils::GetEditor()};
   std::vector<char *> cmdargv{utils::ConstCorrect(editor.c_str()),
-                              utils::ConstCorrect(PATH_CONFIG_TMP), nullptr};
+                              utils::ConstCorrect(tmp_conf.c_str()), nullptr};
 
-  // loop until configuration is valid
-  // or user asked to stop
+  // loop until configuration is valid or user asked to stop
+  // also turn on verbose output when editing
+  TurnOnVerboseOutput(permissions);
   while (true) {
     pid_t pid = fork();
 
@@ -135,15 +164,22 @@ void suex::EditConfiguration(const OptArgs &opts,
       throw std::runtime_error("error while waiting for $EDITOR");
     }
 
+    // we can't secure files that have write permissions
+    if (fchmod(dst_fd, S_IRUSR | S_IRGRP) < 0) {
+      throw suex::PermissionError(
+          "couldn't update temp configuration file ownership: %s",
+          std::strerror(errno));
+    }
+
     // update the file permissions after editing it
-    if (Permissions::Validate(PATH_CONFIG_TMP, opts.AuthStyle())) {
-      file::Clone(PATH_CONFIG_TMP, PATH_CONFIG, true);
+    if (Permissions::Validate(tmp_conf, opts.AuthStyle())) {
+      file::Clone(dst_fd, src_fd, true);
       std::cout << PATH_CONFIG << " changes applied." << std::endl;
       return;
     }
 
-    std::string prompt{utils::StringFormat(
-        "%s is invalid. Do you want to try again?", PATH_CONFIG)};
+    std::string prompt{
+        Sprintf("%s is invalid. Do you want to try again?", PATH_CONFIG)};
     if (!utils::AskQuestion(prompt)) {
       std::cout << PATH_CONFIG << " changes discarded." << std::endl;
       return;
@@ -161,8 +197,7 @@ void suex::CheckConfiguration(const OptArgs &opts) {
         !file::IsSecure(opts.ConfigPath())) {
       throw suex::ConfigError("configuration file is not secure");
     }
-
-    // done here
+    // done here...
     return;
   }
 
