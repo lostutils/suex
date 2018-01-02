@@ -80,6 +80,15 @@ void suex::ShowVersion() { std::cout << "suex: " << VERSION << std::endl; }
 
 void suex::EditConfiguration(const OptArgs &opts,
                              const Permissions &permissions) {
+  if (!permissions.Privileged()) {
+    throw suex::PermissionError(
+        "Access denied. You are not allowed to edit the config file");
+  }
+
+  if (!auth::Authenticate(permissions.AuthStyle(), true)) {
+    throw suex::PermissionError("Incorrect password");
+  }
+
   int src_fd = open(PATH_CONFIG, O_RDWR);
   if (src_fd == -1) {
     throw suex::IOError("error opening configuration file: %s",
@@ -104,15 +113,6 @@ void suex::EditConfiguration(const OptArgs &opts,
     lock.l_type = F_UNLCK;
     fcntl(src_fd, F_OFD_SETLKW, &lock);
   });
-
-  if (!permissions.Privileged()) {
-    throw suex::PermissionError(
-        "Access denied. You are not allowed to edit the config file");
-  }
-
-  if (!auth::Authenticate(permissions.AuthStyle(), true)) {
-    throw suex::PermissionError("Incorrect password");
-  }
 
   FILE *tmp_f = tmpfile();
   if (tmp_f == nullptr) {
