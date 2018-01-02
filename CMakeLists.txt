@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.7)
-
 project(suex)
+
+set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(cotire)
 
 # only linux supported at the moment
 if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -41,6 +43,7 @@ add_executable(suex ${SOURCE_FILES})
 
 # suex depends on libpam and libdw
 target_link_libraries(suex pthread re2 pam dw)
+cotire(suex)
 
 # generating man pages from markdown using ronn
 add_custom_command(TARGET suex POST_BUILD
@@ -53,7 +56,7 @@ add_custom_command(TARGET suex POST_BUILD
 
 set_property(
         TARGET suex
-        PROPERTY CXX_CLANG_TIDY clang-tidy;-checks=*,-llvm*,-android*
+        PROPERTY CXX_CLANG_TIDY clang-tidy;-checks=*,-llvm*,-android*,-cppcoreguidelines-pro-type-vararg
 )
 
 install(FILES ${CMAKE_SOURCE_DIR}/man/suex.1 DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1)

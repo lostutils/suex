@@ -292,7 +292,7 @@ void Permissions::Parse(const std::string &path, bool only_user) {
 
   if (file::Size(fileno(f)) > MAX_FILE_SIZE) {
     throw suex::PermissionError("'%s' size is %ld, which is not supported",
-                                path.c_str(), file::Size(path));
+                                path.c_str(), file::Size(fileno(f)));
   }
 
   perms_.clear();

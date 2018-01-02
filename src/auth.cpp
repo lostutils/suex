@@ -2,6 +2,7 @@
 #include <conf.h>
 #include <exceptions.h>
 #include <file.h>
+#include <fmt.h>
 #include <glob.h>
 #include <logger.h>
 
@@ -89,8 +90,8 @@ int PamConversation(int num_msg, const struct pam_message **msg,
     return PAM_AUTH_ERR;
   }
 
-  std::string prompt{utils::StringFormat("[suex] password for %s: ",
-                                         RunningUser().Name().c_str())};
+  std::string prompt{
+      Sprintf("[suex] password for %s: ", RunningUser().Name().c_str())};
   auth_data->pam_resp->resp = getpass(prompt.c_str());
   auth_data->pam_resp->resp_retcode = 0;
   *resp = auth_data->pam_resp;
@@ -100,7 +101,7 @@ int PamConversation(int num_msg, const struct pam_message **msg,
 int auth::ClearTokens(const std::string &style) {
   glob_t globbuf{};
   std::string glob_pattern{
-      StringFormat("%s/%s*", PATH_SUEX_TMP, GetTokenPrefix(style).c_str())};
+      Sprintf("%s/%s*", PATH_SUEX_TMP, GetTokenPrefix(style).c_str())};
   if (glob(glob_pattern.c_str(), 0, nullptr, &globbuf) != 0) {
     logger::debug() << "glob returned nothing" << std::endl;
     return 0;
@@ -118,8 +119,7 @@ int auth::ClearTokens(const std::string &style) {
 }
 
 bool auth::StyleExists(const std::string &style) {
-  std::string policy_path{
-      StringFormat("%s/%s", PATH_PAM_POlICY, style.c_str())};
+  std::string policy_path{Sprintf("%s/%s", PATH_PAM_POlICY, style.c_str())};
   return utils::path::Exists(policy_path);
 }
 

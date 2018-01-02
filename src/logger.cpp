@@ -1,3 +1,4 @@
+#include <fmt.h>
 #include <logger.h>
 #include <utils.h>
 
@@ -26,8 +27,9 @@ Logger::Logger(Type type) : type_(type), user_(RunningUser()) {}
 
 Logger::Logger(const Logger &other) : type_{other.type_} {
   std::string type{TypeName(other.type_)};
-  throw std::runtime_error(utils::StringFormat(
-      "dont copy logger '%s', use the static ones.", type.c_str()));
+  std::string errmsg{
+      Sprintf("dont copy logger '%s', use the static ones.", type.c_str())};
+  throw std::runtime_error(errmsg);
 }
 
 std::ostream &Logger::operator<<(const char *text) {

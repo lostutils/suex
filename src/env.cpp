@@ -1,4 +1,5 @@
 #include <env.h>
+#include <fmt.h>
 #include <utils.h>
 #include <sstream>
 
@@ -15,7 +16,7 @@ std::string suex::env::Get(const std::string &env) {
 
 char *suex::env::GetRaw(const std::string &env) {
   std::string val{Get(env)};
-  std::string raw{utils::StringFormat("%s=%s", env.c_str(), val.c_str())};
+  std::string raw{Sprintf("%s=%s", env.c_str(), val.c_str())};
   return strdup(raw.c_str());
 }
 
@@ -35,6 +36,6 @@ std::pair<std::string, std::string> suex::env::SplitRaw(
 }
 
 char *suex::env::ToRaw(const std::string &key, const std::string &val) {
-  std::string raw = utils::StringFormat("%s=%s", key.c_str(), val.c_str());
+  std::string raw = Sprintf("%s=%s", key.c_str(), val.c_str());
   return strdup(raw.c_str());
 }

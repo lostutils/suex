@@ -4,6 +4,7 @@
 #include <logger.h>
 #include <version.h>
 #include <gsl/gsl>
+#include <iostream>
 
 #define BACKWARD_HAS_DW 1
 #include "backward-cpp/backward.hpp"
@@ -99,10 +100,6 @@ int Do(const Permissions &permissions, const OptArgs &opts) {
   }
 
   if (opts.EditConfig()) {
-    if (opts.Clear()) {
-      RemoveEditLock();
-    }
-
     EditConfiguration(opts, permissions);
     return 0;
   }

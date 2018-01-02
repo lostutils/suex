@@ -9,5 +9,7 @@ bool Exists(const std::string &path);
 
 const std::string Real(const std::string &path);
 
+const std::string Readlink(const std::string &path);
+
 const std::string Locate(const std::string &path, bool searchInPath = true);
 }
