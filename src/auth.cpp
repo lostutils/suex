@@ -5,6 +5,7 @@
 #include <glob.h>
 #include <logger.h>
 
+#include <fcntl.h>
 #include <security/pam_misc.h>
 #include <gsl/gsl>
 #include <sstream>
@@ -34,15 +35,17 @@ std::string GetFilepath(const std::string &style,
 }
 
 void SetToken(time_t ts, const std::string &filename) {
-  FILE *f = fopen(filename.c_str(), "w");
-  if (f == nullptr) {
-    throw suex::IOError("couldn't open token file for writing");
+  int fd = open(filename.c_str(),
+                O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW | O_WRONLY,
+                S_IRUSR | S_IRGRP);
+  if (fd == -1) {
+    throw IOError("error when opening '%s' for writing: %s", filename.c_str(),
+                  strerror(errno));
   }
 
-  DEFER(fclose(f));
-  file::Secure(fileno(f));
+  DEFER(close(fd));
 
-  file::Buffer buff(fileno(f), std::ios::out);
+  file::Buffer buff(fd, std::ios::out);
   std::ostream os(&buff);
   os << ts;
 }

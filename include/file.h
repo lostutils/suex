@@ -10,13 +10,7 @@ double Size(int fd);
 
 bool Remove(const std::string &path, bool silent = false);
 
-bool IsSecure(const std::string &path);
-
 bool IsSecure(int fd);
 
-void Secure(int fd);
-
-void Clone(int src_fd, int dst_fd, bool secure = false);
-
-void Create(const std::string &path, bool secure = false);
+void Clone(int src_fd, int dst_fd, mode_t mode);
 }

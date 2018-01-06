@@ -27,19 +27,19 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-set(CMAKE_CXX_FLAGS "-O0 -Wall -Werror -Wno-c++1z-extensions")
+set(CMAKE_CXX_FLAGS "-O0 -Wall -Werror -std=c++1z -Wno-c++1z-extensions")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
 
 # --- build ---
 
-file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/backward-cpp/backward.cpp" "deps/gsl/gsl/*")
+file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/gsl/gsl/*")
 include_directories(include deps/gsl/include deps)
 add_executable(suex ${SOURCE_FILES})
 
 # suex depends on libpam and libdw
-target_link_libraries(suex pthread re2 pam dw)
+target_link_libraries(suex pthread re2 pam)
 
 # generating man pages from markdown using ronn
 add_custom_command(TARGET suex POST_BUILD
@@ -52,7 +52,7 @@ add_custom_command(TARGET suex POST_BUILD
 
 set_property(
         TARGET suex
-        PROPERTY CXX_CLANG_TIDY clang-tidy;-checks=*,-llvm*,-android*,-cppcoreguidelines-pro-type-vararg
+        PROPERTY CXX_CLANG_TIDY "clang-tidy;-checks=*,-llvm*,-android*,-cppcoreguidelines-pro-type-vararg,-cppcoreguidelines-pro-bounds-pointer-arithmetic"
 )
 
 install(FILES ${CMAKE_SOURCE_DIR}/man/suex.1 DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1)

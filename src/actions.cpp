@@ -57,8 +57,8 @@ void suex::SwitchUserAndExecute(const User &user, char *const cmdargv[],
   execvpe(*cmdargv, &(*cmdargv), envp);
 }
 
-void suex::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
-  if (!permissions.Privileged()) {
+void suex::TurnOnVerboseOutput() {
+  if (!Permissions::Privileged()) {
     throw suex::PermissionError(
         "Access denied. You are not allowed to view verbose output.");
   }
@@ -89,59 +89,55 @@ void suex::EditConfiguration(const OptArgs &opts,
     throw suex::PermissionError("Incorrect password");
   }
 
-  int src_fd = open(PATH_CONFIG, O_RDWR);
-  if (src_fd == -1) {
+  int conf_fd = open(PATH_CONFIG, O_NOFOLLOW | O_RDWR);
+  if (conf_fd == -1) {
     throw suex::IOError("error opening configuration file: %s",
                         std::strerror(errno));
   }
 
-  DEFER(close(src_fd));
+  DEFER(close(conf_fd));
 
   struct flock lock = {0};
-  lock.l_type = F_WRLCK;
 
-  if (fcntl(src_fd, F_OFD_SETLK, &lock) < 0) {
-    if (errno & (EACCES | EAGAIN)) {
-      throw suex::PermissionError(
-          "Configuration is being edited in another session");
-    }
+  if (fcntl(conf_fd, F_OFD_GETLK, &lock) < 0) {
+    throw suex::IOError("Error when getting lock configuration: %s",
+                        strerror(errno));
+  }
+
+  if (lock.l_type != F_UNLCK) {
+    throw suex::PermissionError(
+        "Configuration is being edited in another session");
+  }
+
+  lock.l_type = F_WRLCK;
+  if (fcntl(conf_fd, F_OFD_SETLKW, &lock) < 0) {
     throw suex::IOError("Error when locking configuration: %s",
                         strerror(errno));
   }
 
   DEFER({
     lock.l_type = F_UNLCK;
-    fcntl(src_fd, F_OFD_SETLKW, &lock);
+    fcntl(conf_fd, F_OFD_SETLKW, &lock);
   });
 
-  FILE *tmp_f = tmpfile();
-  if (tmp_f == nullptr) {
-    throw suex::IOError("Couldn't create a temporary configuration file");
+  int tmp_fd = open(PATH_TMP, O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IRGRP);
+  if (tmp_fd < 0) {
+    throw suex::IOError("Couldn't create a temporary configuration file: %s",
+                        strerror(errno));
   }
-  DEFER(fclose(tmp_f));
-
-  int dst_fd{fileno(tmp_f)};
-
-  std::string tmp_conf{Sprintf("/proc/%d/fd/%d", getpid(), dst_fd)};
+  DEFER(close(tmp_fd));
+  std::string tmp_path{utils::path::GetPath(tmp_fd)};
 
   // secure the file
   // -> copy the content
   // -> make it rw by root:root
-  file::Clone(src_fd, dst_fd, true);
-
-  if (fchmod(dst_fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0) {
-    throw suex::PermissionError(
-        "couldn't update temp configuration file ownership: %s",
-        std::strerror(errno));
-  }
+  file::Clone(conf_fd, tmp_fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
   std::string editor{utils::GetEditor()};
   std::vector<char *> cmdargv{utils::ConstCorrect(editor.c_str()),
-                              utils::ConstCorrect(tmp_conf.c_str()), nullptr};
+                              utils::ConstCorrect(tmp_path.c_str()), nullptr};
 
   // loop until configuration is valid or user asked to stop
-  // also turn on verbose output when editing
-  TurnOnVerboseOutput(permissions);
   while (true) {
     pid_t pid = fork();
 
@@ -164,16 +160,9 @@ void suex::EditConfiguration(const OptArgs &opts,
       throw std::runtime_error("error while waiting for $EDITOR");
     }
 
-    // we can't secure files that have write permissions
-    if (fchmod(dst_fd, S_IRUSR | S_IRGRP) < 0) {
-      throw suex::PermissionError(
-          "couldn't update temp configuration file ownership: %s",
-          std::strerror(errno));
-    }
-
     // update the file permissions after editing it
-    if (Permissions::Validate(tmp_conf, opts.AuthStyle())) {
-      file::Clone(dst_fd, src_fd, true);
+    if (Permissions::Validate(tmp_fd, opts.AuthStyle())) {
+      file::Clone(tmp_fd, conf_fd, S_IRUSR | S_IRGRP);
       std::cout << PATH_CONFIG << " changes applied." << std::endl;
       return;
     }
@@ -189,14 +178,16 @@ void suex::EditConfiguration(const OptArgs &opts,
 
 void suex::CheckConfiguration(const OptArgs &opts) {
   if (opts.CommandArguments().empty()) {
-    if (!Permissions::Validate(opts.ConfigPath(), opts.AuthStyle())) {
+    int fd = open(opts.ConfigPath().c_str(), O_RDONLY);
+    if (fd < 0) {
+      throw suex::ConfigError("couldn't open '%s' for reading: %s",
+                              opts.ConfigPath().c_str(), strerror(errno));
+    }
+
+    if (!Permissions::Validate(fd, opts.AuthStyle())) {
       throw suex::ConfigError("configuration is not valid");
     }
 
-    if (opts.ConfigPath() == PATH_CONFIG &&
-        !file::IsSecure(opts.ConfigPath())) {
-      throw suex::ConfigError("configuration file is not secure");
-    }
     // done here...
     return;
   }

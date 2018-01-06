@@ -5,9 +5,6 @@
 #include <version.h>
 #include <gsl/gsl>
 
-#define BACKWARD_HAS_DW 1
-#include "backward-cpp/backward.hpp"
-
 using suex::optargs::OptArgs;
 using suex::permissions::Permissions;
 
@@ -96,10 +93,6 @@ char *const *GetEnv(std::vector<char *> *vec, const Permissions &permissions,
 int Do(const Permissions &permissions, const OptArgs &opts) {
   CreateRuntimeDirectories();
 
-  if (opts.VerboseMode()) {
-    TurnOnVerboseOutput(permissions);
-  }
-
   if (opts.EditConfig()) {
     EditConfiguration(opts, permissions);
     return 0;
@@ -153,8 +146,10 @@ int main(int argc, char *argv[]) {
                                   getegid());
     }
     OptArgs opts{argc, argv};
-    Permissions permissions{PATH_CONFIG, opts.AuthStyle(),
-                            opts.ListPermissions()};
+    if (opts.VerboseMode()) {
+      TurnOnVerboseOutput();
+    }
+    Permissions permissions{PATH_CONFIG, opts.AuthStyle()};
     return Do(permissions, opts);
   } catch (InvalidUsage &) {
     ShowUsage();

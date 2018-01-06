@@ -1,7 +1,5 @@
 #include <exceptions.h>
-#include <fmt.h>
 #include <logger.h>
-#include <utils.h>
 
 using suex::logger::Type;
 using suex::logger::Logger;

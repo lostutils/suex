@@ -1,9 +1,11 @@
 #include <conf.h>
 #include <exceptions.h>
+#include <fcntl.h>
 #include <file.h>
 #include <glob.h>
 #include <logger.h>
 #include <rx.h>
+#include <climits>
 #include <gsl/gsl>
 #include <sstream>
 
@@ -159,8 +161,7 @@ void ParseOptions(const std::string &options, bool *nopass, bool *keepenv,
   }
 }
 
-void Permissions::ParseLine(int lineno, const std::string &line,
-                            bool only_user) {
+void Permissions::ParseLine(int lineno, const std::string &line) {
   logger::debug() << "parsing line " << lineno << ": '" << line << "'"
                   << std::endl;
 
@@ -208,11 +209,6 @@ void Permissions::ParseLine(int lineno, const std::string &line,
     // populate the permissions vector
     std::vector<User> users;
     for (const User &user : GetUsers(m["user"], &users)) {
-      if (only_user && user.Id() != RunningUser().Id()) {
-        logger::debug() << "skipping user '" << user.Name()
-                        << "' - only user mode" << std::endl;
-      }
-
       if (!user.Exists()) {
         throw suex::PermissionError("user '%s' doesn't exist",
                                     user.Name().c_str());
@@ -243,69 +239,50 @@ const Entity *Permissions::Get(const permissions::User &user,
   return perm;
 }
 
-bool Permissions::Validate(const std::string &path,
-                           const std::string &auth_style) {
-  Permissions perms{path, auth_style, false};
+bool Permissions::Validate(int fd, const std::string &auth_style) {
+  Permissions perms{fd, auth_style};
   return perms.Size() > 0;
 }
 
-Permissions::Permissions(const std::string &path, std::string auth_style,
-                         bool only_user)
-    : auth_style_{std::move(auth_style)}, secure_{PATH_CONFIG == path} {
-  // only secure the main file
-  if (!suex::utils::path::Exists(path)) {
-    file::Create(path, secure_);
-  }
-  Parse(path, only_user);
+Permissions::Permissions(int fd, std::string auth_style)
+    : auth_style_{std::move(auth_style)} {
+  LoadFile(fd);
 }
 
-bool GetLine(std::istream &is, std::string *line) {
-  std::stringstream ss;
-  char buff{'\0'};
-  while (!is.eof() && ss.tellp() < MAX_LINE) {
-    is.read(&buff, 1);
-    if (buff == '\n') {
-      break;
-    }
+Permissions::Permissions(const std::string &path, std::string auth_style)
+    : auth_style_{std::move(auth_style)} {
+  int fd =
+      open(path.c_str(), O_CREAT | O_CLOEXEC | O_RDONLY, S_IRUSR | S_IRGRP);
 
-    ss << buff;
+  if (fd == -1) {
+    throw IOError("error when opening '%s' for writing: %s", path.c_str(),
+                  strerror(errno));
   }
+  DEFER(close(fd));
 
-  if (ss.tellp() > MAX_LINE) {
-    throw ConfigError("line is too long and will not be parsed");
-  }
-
-  *line = ss.str();
-
-  return !is.eof();
+  LoadFile(fd);
 }
 
-void Permissions::Parse(const std::string &path, bool only_user) {
-  FILE *f = fopen(path.c_str(), "r");
-
-  if (f == nullptr) {
-    throw IOError("error when opening '%s' for writing", path.c_str());
-  }
-  DEFER(fclose(f));
-
-  if (secure_ && !file::IsSecure(fileno(f))) {
+void Permissions::LoadFile(int fd) {
+  std::string path{utils::path::Readlink(fd)};
+  logger::debug() << "parsing '" << path << "'" << std::endl;
+  if (path == PATH_CONFIG && !file::IsSecure(fd)) {
     throw suex::PermissionError("'%s' is not secure", path.c_str());
   }
 
-  if (file::Size(fileno(f)) > MAX_FILE_SIZE) {
+  if (file::Size(fd) > MAX_FILE_SIZE) {
     throw suex::PermissionError("'%s' size is %ld, which is not supported",
-                                path.c_str(), file::Size(fileno(f)));
+                                path.c_str(), file::Size(fd));
   }
 
   perms_.clear();
 
-  file::Buffer buff(fileno(f), std::ios::in);
+  file::Buffer buff(fd, std::ios::in);
   std::istream is(&buff);
-
   std::string line;
-  for (int lineno = 1; GetLine(is, &line); lineno++) {
+  for (int lineno = 1; std::getline(is, line); lineno++) {
     try {
-      ParseLine(lineno, line, only_user);
+      ParseLine(lineno, line);
     } catch (std::exception &e) {
       logger::error() << e.what() << std::endl;
       perms_.clear();
@@ -321,14 +298,14 @@ void Permissions::Parse(const std::string &path, bool only_user) {
     perms_.emplace(perms_.begin(), p);
   }
 }
-const re2::RE2 & ::suex::permissions::PermissionsOptionsRegex() {
+const re2::RE2 &permissions::PermissionsOptionsRegex() {
   static const re2::RE2 re{R"((nopass|persist|keepenv|setenv\s\{.*\}))"};
   if (!re.ok()) {
     throw std::runtime_error("permissions options regex failed to compile");
   }
   return re;
 }
-const re2::RE2 & ::suex::permissions::PermissionLineRegex() {
+const re2::RE2 &permissions::PermissionLineRegex() {
   static const re2::RE2 re{
       R"(^(?P<type>permit|deny)\s+((?P<options>.*)\s+)?(?P<user>(:)?[a-z_][a-z0-9_-]*[$]?)\s+as\s+(?P<as>[a-z_][a-z0-9_-]*[$]?)\s+cmd\s+(?P<cmd>[^\s]+)(\s+args\s+((?P<args>[^\s].*[^\s])[\s]*))?\s*$)"};
   if (!re.ok()) {
@@ -336,14 +313,14 @@ const re2::RE2 & ::suex::permissions::PermissionLineRegex() {
   }
   return re;
 }
-const re2::RE2 & ::suex::permissions::CommentLineRegex() {
+const re2::RE2 &permissions::CommentLineRegex() {
   static const re2::RE2 re{R"(^[\t|\s]*#.*)"};
   if (!re.ok()) {
     throw std::runtime_error("comment regex failed to compile");
   }
   return re;
 }
-const re2::RE2 & ::suex::permissions::EmptyLineRegex() {
+const re2::RE2 &permissions::EmptyLineRegex() {
   static const re2::RE2 re{R"(^[\t|\s]*)"};
   if (!re.ok()) {
     throw std::runtime_error("empty line regex failed to compile");

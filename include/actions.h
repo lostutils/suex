@@ -7,7 +7,7 @@
 
 namespace suex {
 
-void TurnOnVerboseOutput(const permissions::Permissions &permissions);
+void TurnOnVerboseOutput();
 
 void ClearAuthTokens(const permissions::Permissions &permissions);
 
