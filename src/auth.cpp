@@ -34,22 +34,21 @@ std::string GetFilepath(const std::string &style,
   return ss.str();
 }
 
-void SetToken(time_t ts, const std::string &filename) {
-  FILE *f = fopen(filename.c_str(), "w");
-  DEFER(file::Close(fileno(f)));
-  file::Chmod(fileno(f), S_IRUSR | S_IRGRP);
-  fprintf(f, "%li", ts);
+time_t SetToken(time_t ts, const std::string &filename) {
+  int fd =
+      file::Open(filename, O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IRGRP);
+
+  DEFER(file::Close(fd));
+  auto txt{std::to_string(ts)};
+  write(fd, txt.c_str(), txt.size());
+  return ts;
 }
 
 time_t GetToken(const std::string &filename) {
-  if (!utils::path::Exists(filename)) {
-    SetToken(0, filename);
-    return 0;
-  }
-
-  int fd = file::Open(filename, O_RDONLY);
+  // no need to close the fd
+  // the following take care of that
+  int fd = file::Open(filename, O_CREAT | O_RDONLY);
   DEFER(file::Close(fd));
-
   struct stat st {
     0
   };
@@ -65,11 +64,20 @@ time_t GetToken(const std::string &filename) {
     throw suex::PermissionError("auth timestamp file has invalid permissions");
   }
 
-  file::Buffer buff(fd, std::ios::in);
-  std::istream is(&buff);
+  char buff[st.st_size];
+  auto buff_view{gsl::make_span(static_cast<char *>(buff), st.st_size)};
+  ssize_t bytes =
+      read(fd, buff_view.data(), static_cast<size_t>(buff_view.size()));
+  if (bytes == -1) {
+    throw suex::IOError("couldn't read auth timestamp");
+  }
 
-  time_t ts;
-  is >> ts;
+  time_t ts{0};
+  if (bytes > 0) {
+    std::istringstream ss(buff_view.data());
+    ss >> ts;
+  }
+
   return ts;
 }
 
