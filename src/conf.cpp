@@ -251,21 +251,31 @@ Permissions::Permissions(int fd, std::string auth_style)
 
 Permissions::Permissions(const std::string &path, std::string auth_style)
     : auth_style_{std::move(auth_style)} {
-  int fd =
-      open(path.c_str(), O_CREAT | O_CLOEXEC | O_RDONLY, S_IRUSR | S_IRGRP);
-
-  if (fd == -1) {
-    throw IOError("error when opening '%s' for writing: %s", path.c_str(),
-                  strerror(errno));
-  }
-  DEFER(close(fd));
+  int fd = file::Open(path, O_CREAT | O_RDONLY, S_IRUSR | S_IRGRP);
+  DEFER(file::Close(fd));
 
   LoadFile(fd);
 }
 
 void Permissions::LoadFile(int fd) {
   std::string path{utils::path::Readlink(fd)};
-  logger::debug() << "parsing '" << path << "'" << std::endl;
+
+  struct flock write_lock = {0};
+  if (path == PATH_CONFIG) {
+    write_lock.l_type = F_RDLCK;
+    logger::debug() << "acquiring lock on " << path << std::endl;
+    if (fcntl(fd, F_OFD_SETLKW, &write_lock) < 0) {
+      throw suex::IOError("Error when locking configuration: %s",
+                          strerror(errno));
+    }
+  }
+
+  DEFER(if (path == PATH_CONFIG) {
+    write_lock.l_type = F_UNLCK;
+    fcntl(fd, F_OFD_SETLKW, &write_lock);
+  });
+
+  logger::debug() << "parsing '" << path << "' (fd " << fd << ")" << std::endl;
   if (path == PATH_CONFIG && !file::IsSecure(fd)) {
     throw suex::PermissionError("'%s' is not secure", path.c_str());
   }
@@ -277,10 +287,7 @@ void Permissions::LoadFile(int fd) {
 
   perms_.clear();
 
-  file::Buffer buff(fd, std::ios::in);
-  std::istream is(&buff);
-  std::string line;
-  for (int lineno = 1; std::getline(is, line); lineno++) {
+  file::ReadLines(fd, [&](int lineno, const std::string &line) {
     try {
       ParseLine(lineno, line);
     } catch (std::exception &e) {
@@ -288,7 +295,7 @@ void Permissions::LoadFile(int fd) {
       perms_.clear();
       return;
     }
-  }
+  });
 
   // if the user is privileged, add an "all rule" to the
   // beginning of the permissions vector

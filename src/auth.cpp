@@ -35,19 +35,10 @@ std::string GetFilepath(const std::string &style,
 }
 
 void SetToken(time_t ts, const std::string &filename) {
-  int fd = open(filename.c_str(),
-                O_CREAT | O_TRUNC | O_CLOEXEC | O_NOFOLLOW | O_WRONLY,
-                S_IRUSR | S_IRGRP);
-  if (fd == -1) {
-    throw IOError("error when opening '%s' for writing: %s", filename.c_str(),
-                  strerror(errno));
-  }
-
-  DEFER(close(fd));
-
-  file::Buffer buff(fd, std::ios::out);
-  std::ostream os(&buff);
-  os << ts;
+  FILE *f = fopen(filename.c_str(), "w");
+  DEFER(file::Close(fileno(f)));
+  file::Chmod(fileno(f), S_IRUSR | S_IRGRP);
+  fprintf(f, "%li", ts);
 }
 
 time_t GetToken(const std::string &filename) {
@@ -56,16 +47,13 @@ time_t GetToken(const std::string &filename) {
     return 0;
   }
 
-  FILE *f = fopen(filename.c_str(), "r");
-  if (f == nullptr) {
-    throw suex::IOError("couldn't open token file for reading");
-  }
-  DEFER(fclose(f));
+  int fd = file::Open(filename, O_RDONLY);
+  DEFER(file::Close(fd));
 
   struct stat st {
     0
   };
-  if (fstat(fileno(f), &st) != 0) {
+  if (fstat(fd, &st) != 0) {
     throw suex::IOError("couldn't open token file for reading");
   }
 
@@ -73,11 +61,11 @@ time_t GetToken(const std::string &filename) {
     throw suex::IOError("auth timestamp is not a file");
   }
 
-  if (!file::IsSecure(fileno(f))) {
+  if (!file::IsSecure(fd)) {
     throw suex::PermissionError("auth timestamp file has invalid permissions");
   }
 
-  file::Buffer buff(fileno(f), std::ios::in);
+  file::Buffer buff(fd, std::ios::in);
   std::istream is(&buff);
 
   time_t ts;

@@ -13,6 +13,8 @@ using suex::permissions::Permissions;
 using suex::permissions::User;
 using suex::optargs::OptArgs;
 
+#define PATH_EDIT_LOCK PATH_VAR_RUN "/suex/edit.lock"
+
 void suex::ShowPermissions(const permissions::Permissions &permissions) {
   for (const permissions::Entity &e : permissions) {
     if (e.Owner().Id() != RunningUser().Id() && !permissions.Privileged()) {
@@ -89,55 +91,50 @@ void suex::EditConfiguration(const OptArgs &opts,
     throw suex::PermissionError("Incorrect password");
   }
 
-  int conf_fd = open(PATH_CONFIG, O_NOFOLLOW | O_RDWR);
-  if (conf_fd == -1) {
-    throw suex::IOError("error opening configuration file: %s",
-                        std::strerror(errno));
-  }
+  int edit_fd = file::Open(PATH_EDIT_LOCK, O_CREAT | O_RDWR);
+  DEFER({
+    file::Close(edit_fd);
+    file::Remove(PATH_EDIT_LOCK);
+  });
 
-  DEFER(close(conf_fd));
-
-  struct flock lock = {0};
-
-  if (fcntl(conf_fd, F_OFD_GETLK, &lock) < 0) {
-    throw suex::IOError("Error when getting lock configuration: %s",
+  struct flock edit_lock = {0};
+  if (fcntl(edit_fd, F_OFD_GETLK, &edit_lock) < 0) {
+    throw suex::IOError("Error when getting edit lock configuration: %s",
                         strerror(errno));
   }
 
-  if (lock.l_type != F_UNLCK) {
+  if (edit_lock.l_type != F_UNLCK) {
     throw suex::PermissionError(
         "Configuration is being edited in another session");
   }
 
-  lock.l_type = F_WRLCK;
-  if (fcntl(conf_fd, F_OFD_SETLKW, &lock) < 0) {
+  edit_lock.l_type = F_WRLCK;
+  if (fcntl(edit_fd, F_OFD_SETLKW, &edit_lock) < 0) {
     throw suex::IOError("Error when locking configuration: %s",
                         strerror(errno));
   }
 
   DEFER({
-    lock.l_type = F_UNLCK;
-    fcntl(conf_fd, F_OFD_SETLKW, &lock);
+    edit_lock.l_type = F_UNLCK;
+    fcntl(edit_fd, F_OFD_SETLKW, &edit_lock);
   });
 
-  int tmp_fd = open(PATH_TMP, O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IRGRP);
-  if (tmp_fd < 0) {
-    throw suex::IOError("Couldn't create a temporary configuration file: %s",
-                        strerror(errno));
-  }
-  DEFER(close(tmp_fd));
-  std::string tmp_path{utils::path::GetPath(tmp_fd)};
+  int conf_fd = file::Open(PATH_CONFIG, O_RDWR);
+  DEFER(file::Close(conf_fd));
+
+  int tmp_fd =
+      file::Open(PATH_TMP, O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IRGRP);
+  DEFER(file::Close(tmp_fd));
 
   // secure the file
   // -> copy the content
   // -> make it rw by root:root
   file::Clone(conf_fd, tmp_fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-
+  std::string tmp_path{utils::path::GetPath(tmp_fd)};
   std::string editor{utils::GetEditor()};
   std::vector<char *> cmdargv{utils::ConstCorrect(editor.c_str()),
                               utils::ConstCorrect(tmp_path.c_str()), nullptr};
 
-  // loop until configuration is valid or user asked to stop
   while (true) {
     pid_t pid = fork();
 
@@ -152,38 +149,43 @@ void suex::EditConfiguration(const OptArgs &opts,
 
     // parent process should wait until the child exists
     int status;
-
     while (-1 == waitpid(pid, &status, 0)) {
-      // wait...
     };
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
       throw std::runtime_error("error while waiting for $EDITOR");
     }
 
-    // update the file permissions after editing it
     if (Permissions::Validate(tmp_fd, opts.AuthStyle())) {
-      file::Clone(tmp_fd, conf_fd, S_IRUSR | S_IRGRP);
-      std::cout << PATH_CONFIG << " changes applied." << std::endl;
-      return;
+      break;
     }
 
     std::string prompt{
         Sprintf("%s is invalid. Do you want to try again?", PATH_CONFIG)};
     if (!utils::AskQuestion(prompt)) {
-      std::cout << PATH_CONFIG << " changes discarded." << std::endl;
+      std::cerr << PATH_CONFIG << " changes discarded." << std::endl;
       return;
     }
   }
+
+  struct flock write_lock = {0};
+  write_lock.l_type = F_WRLCK;
+  if (fcntl(conf_fd, F_OFD_SETLKW, &write_lock) < 0) {
+    throw suex::IOError("Error when locking configuration: %s",
+                        strerror(errno));
+  }
+
+  DEFER({
+    write_lock.l_type = F_UNLCK;
+    fcntl(conf_fd, F_OFD_SETLKW, &write_lock);
+  });
+
+  file::Clone(tmp_fd, conf_fd, S_IRUSR | S_IRGRP);
+  std::cout << PATH_CONFIG << " changes applied." << std::endl;
 }
 
 void suex::CheckConfiguration(const OptArgs &opts) {
   if (opts.CommandArguments().empty()) {
-    int fd = open(opts.ConfigPath().c_str(), O_RDONLY);
-    if (fd < 0) {
-      throw suex::ConfigError("couldn't open '%s' for reading: %s",
-                              opts.ConfigPath().c_str(), strerror(errno));
-    }
-
+    int fd = file::Open(opts.ConfigPath(), O_RDONLY);
     if (!Permissions::Validate(fd, opts.AuthStyle())) {
       throw suex::ConfigError("configuration is not valid");
     }
