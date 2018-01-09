@@ -41,9 +41,15 @@ void suex::file::Clone(int src_fd, int dst_fd, mode_t mode) {
   logger::debug() << "cloning " << src_fd << "(" << st.st_size << " bytes) -> "
                   << dst_fd << std::endl;
 
-  for (int fd : {src_fd, dst_fd}) {
-    file::Seek(fd, 0, SEEK_SET);
-  }
+  /* seek to the beginning of the file,
+   * but don't forget to go back to the previous location */
+  off_t src_pos = file::Tell(src_fd);
+  DEFER(file::Seek(src_fd, src_pos, SEEK_SET));
+  file::Seek(src_fd, 0, SEEK_SET);
+
+  off_t dst_pos = file::Tell(dst_fd);
+  DEFER(file::Seek(dst_fd, dst_pos, SEEK_SET));
+  file::Seek(dst_fd, 0, SEEK_SET);
 
   if (sendfile(dst_fd, src_fd, nullptr, static_cast<size_t>(st.st_size)) < 0) {
     throw suex::IOError("can't clone '%d to '%d'. sendfile(%d) failed: %s",
@@ -54,6 +60,7 @@ void suex::file::Clone(int src_fd, int dst_fd, mode_t mode) {
     throw suex::PermissionError("error on chown '%d': %s", dst_fd,
                                 std::strerror(errno));
   }
+
   if (fchmod(dst_fd, mode) < 0) {
     throw suex::PermissionError("error on chmod '%d': %s", dst_fd,
                                 std::strerror(errno));
@@ -101,6 +108,7 @@ bool file::ReadLine(FILE *f, char *line[]) {
   }
   return read != -1;
 }
+
 off_t file::Seek(int fd, off_t offset, int whence) {
   off_t pos = lseek(fd, offset, whence);
   if (pos < 0) {
@@ -108,6 +116,7 @@ off_t file::Seek(int fd, off_t offset, int whence) {
   }
   return pos;
 }
+
 ssize_t file::Read(int fd, gsl::span<char> buff) {
   ssize_t bytes = read(fd, buff.data(), static_cast<size_t>(buff.size()));
   if (bytes == -1) {
@@ -115,6 +124,7 @@ ssize_t file::Read(int fd, gsl::span<char> buff) {
   }
   return bytes;
 }
+
 ssize_t file::Write(int fd, gsl::span<const char> buff) {
   ssize_t bytes = write(fd, buff.data(), static_cast<size_t>(buff.size()));
   if (bytes == -1) {
@@ -122,3 +132,5 @@ ssize_t file::Write(int fd, gsl::span<const char> buff) {
   }
   return bytes;
 }
+
+off_t file::Tell(int fd) { return Seek(fd, 0, SEEK_CUR); }

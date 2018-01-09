@@ -24,5 +24,7 @@ ssize_t Read(int fd, gsl::span<char> buff);
 
 ssize_t Write(int fd, gsl::span<const char> buff);
 
+off_t Tell(int fd);
+
 bool ReadLine(FILE *f, char *line[]);
 }

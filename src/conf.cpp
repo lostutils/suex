@@ -296,7 +296,10 @@ Permissions &Permissions::Load() {
 
   // fdopen should have seeked to the beginning of the file
   // but in practice, it doesn't always work.
+  off_t fd_pos = file::Tell(fd_);
+  DEFER(file::Seek(fd_, fd_pos, SEEK_SET));
   file::Seek(fd_, 0, SEEK_SET);
+
   FILE *f{fdopen(fd_, "r")};
   if (f == nullptr) {
     throw suex::IOError("error opening '%d' for reading: %s", fd_,
