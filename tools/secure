@@ -1,2 +1,5 @@
 #!/usr/bin/env fish
-cd $ROOTDIR/build;and eval (which sudo) make secure
+/bin/sudo chown root:root $ROOTDIR/bin/suex
+/bin/sudo chmod a+x $ROOTDIR/bin/suex
+/bin/sudo chmod u+s $ROOTDIR/bin/suex
+/bin/sudo chmod g+s $ROOTDIR/bin/suex

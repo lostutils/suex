@@ -71,21 +71,6 @@ install(TARGETS suex
         PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_EXECUTE SETUID SETGID
         RUNTIME DESTINATION bin)
 
-# --- custom targets ---
-
-add_custom_target(secure
-        COMMAND chown root:root ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
-        COMMAND chmod a+x ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
-        COMMAND chmod u+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex
-        COMMAND chmod g+s ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/suex)
-
-add_custom_target(distclean
-        COMMAND rm -rvf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        COMMAND rm -rvf ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-        COMMAND rm -rvf ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
-        COMMAND rm -rvf ${CMAKE_CURRENT_BINARY_DIR}
-        )
-
 # --- packaging ---
 
 set(CPACK_GENERATOR "RPM;DEB")
