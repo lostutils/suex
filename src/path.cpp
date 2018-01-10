@@ -1,5 +1,6 @@
 #include <exceptions.h>
 #include <logger.h>
+#include <climits>
 #include <gsl/gsl>
 #include <sstream>
 
@@ -36,4 +37,20 @@ bool utils::path::Exists(const std::string &path) {
     0
   };
   return stat(path.c_str(), &fstat) == 0;
+}
+const std::string utils::path::Readlink(int fd) {
+  std::string path{GetPath(fd)};
+  char buff[PATH_MAX];
+  auto buff_view{gsl::make_span(buff)};
+  ssize_t read = readlink(path.c_str(), buff_view.data(), PATH_MAX - 1);
+  if (read < 0) {
+    throw suex::IOError("couldn't readlink '%s': %s", path.c_str(),
+                        strerror(errno));
+  }
+
+  buff_view.at(read) = '\0';
+  return buff_view.data();
+}
+const std::string utils::path::GetPath(int fd) {
+  return Sprintf("/proc/%d/fd/%d", getpid(), fd);
 }

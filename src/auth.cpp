@@ -5,6 +5,7 @@
 #include <glob.h>
 #include <logger.h>
 
+#include <fcntl.h>
 #include <security/pam_misc.h>
 #include <gsl/gsl>
 #include <sstream>
@@ -33,36 +34,22 @@ std::string GetFilepath(const std::string &style,
   return ss.str();
 }
 
-void SetToken(time_t ts, const std::string &filename) {
-  FILE *f = fopen(filename.c_str(), "w");
-  if (f == nullptr) {
-    throw suex::IOError("couldn't open token file for writing");
-  }
-
-  DEFER(fclose(f));
-  file::Secure(fileno(f));
-
-  file::Buffer buff(fileno(f), std::ios::out);
-  std::ostream os(&buff);
-  os << ts;
+time_t SetToken(time_t ts, const std::string &filename) {
+  int fd =
+      file::Open(filename, O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IRGRP);
+  DEFER(file::Close(fd));
+  std::string txt{std::to_string(ts)};
+  file::Write(fd, gsl::make_span(txt.c_str(), txt.size()));
+  return ts;
 }
 
 time_t GetToken(const std::string &filename) {
-  if (!utils::path::Exists(filename)) {
-    SetToken(0, filename);
-    return 0;
-  }
-
-  FILE *f = fopen(filename.c_str(), "r");
-  if (f == nullptr) {
-    throw suex::IOError("couldn't open token file for reading");
-  }
-  DEFER(fclose(f));
-
+  int fd = file::Open(filename, O_CREAT | O_RDONLY);
+  DEFER(file::Close(fd));
   struct stat st {
     0
   };
-  if (fstat(fileno(f), &st) != 0) {
+  if (fstat(fd, &st) != 0) {
     throw suex::IOError("couldn't open token file for reading");
   }
 
@@ -70,15 +57,24 @@ time_t GetToken(const std::string &filename) {
     throw suex::IOError("auth timestamp is not a file");
   }
 
-  if (!file::IsSecure(fileno(f))) {
+  if (!file::IsSecure(fd)) {
     throw suex::PermissionError("auth timestamp file has invalid permissions");
   }
 
-  file::Buffer buff(fileno(f), std::ios::in);
-  std::istream is(&buff);
+  if (file::Size(fd) > MAX_FILE_SIZE) {
+    throw suex::PermissionError("auth timestamp file is too big");
+  }
 
-  time_t ts;
-  is >> ts;
+  char buff[st.st_size];
+  auto buff_view = gsl::make_span(static_cast<char *>(buff), st.st_size);
+  ssize_t bytes = file::Read(fd, buff_view);
+
+  time_t ts{0};
+  if (bytes > 0) {
+    std::istringstream ss(buff_view.data());
+    ss >> ts;
+  }
+
   return ts;
 }
 

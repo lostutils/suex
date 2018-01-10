@@ -13,6 +13,8 @@ using suex::permissions::Permissions;
 using suex::permissions::User;
 using suex::optargs::OptArgs;
 
+#define PATH_EDIT_LOCK PATH_VAR_RUN "/suex/edit.lock"
+
 void suex::ShowPermissions(const permissions::Permissions &permissions) {
   for (const permissions::Entity &e : permissions) {
     if (e.Owner().Id() != RunningUser().Id() && !permissions.Privileged()) {
@@ -57,8 +59,8 @@ void suex::SwitchUserAndExecute(const User &user, char *const cmdargv[],
   execvpe(*cmdargv, &(*cmdargv), envp);
 }
 
-void suex::TurnOnVerboseOutput(const permissions::Permissions &permissions) {
-  if (!permissions.Privileged()) {
+void suex::TurnOnVerboseOutput() {
+  if (!Permissions::Privileged()) {
     throw suex::PermissionError(
         "Access denied. You are not allowed to view verbose output.");
   }
@@ -89,59 +91,45 @@ void suex::EditConfiguration(const OptArgs &opts,
     throw suex::PermissionError("Incorrect password");
   }
 
-  int src_fd = open(PATH_CONFIG, O_RDWR);
-  if (src_fd == -1) {
-    throw suex::IOError("error opening configuration file: %s",
-                        std::strerror(errno));
-  }
+  int edit_fd = file::Open(PATH_EDIT_LOCK, O_CREAT | O_RDWR);
+  DEFER({
+    file::Close(edit_fd);
+    file::Remove(PATH_EDIT_LOCK);
+  });
 
-  DEFER(close(src_fd));
-
-  struct flock lock = {0};
-  lock.l_type = F_WRLCK;
-
-  if (fcntl(src_fd, F_OFD_SETLK, &lock) < 0) {
-    if (errno & (EACCES | EAGAIN)) {
-      throw suex::PermissionError(
-          "Configuration is being edited in another session");
+  struct flock edit_lock = {0};
+  edit_lock.l_type = F_WRLCK;
+  if (fcntl(edit_fd, F_OFD_SETLK, &edit_lock) < 0) {
+    std::string txt{
+        Sprintf("Error when locking configuration: %s", strerror(errno))};
+    if (errno == EAGAIN || errno == EACCES) {
+      txt = "Configuration is being edited in another session";
     }
-    throw suex::IOError("Error when locking configuration: %s",
-                        strerror(errno));
+    throw suex::IOError(txt);
   }
 
   DEFER({
-    lock.l_type = F_UNLCK;
-    fcntl(src_fd, F_OFD_SETLKW, &lock);
+    edit_lock.l_type = F_UNLCK;
+    fcntl(edit_fd, F_OFD_SETLKW, &edit_lock);
   });
 
-  FILE *tmp_f = tmpfile();
-  if (tmp_f == nullptr) {
-    throw suex::IOError("Couldn't create a temporary configuration file");
-  }
-  DEFER(fclose(tmp_f));
+  int conf_fd = file::Open(PATH_CONFIG, O_RDWR);
+  DEFER(file::Close(conf_fd));
 
-  int dst_fd{fileno(tmp_f)};
-
-  std::string tmp_conf{Sprintf("/proc/%d/fd/%d", getpid(), dst_fd)};
+  int tmp_fd =
+      file::Open(PATH_TMP, O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IRGRP);
+  DEFER(file::Close(tmp_fd));
 
   // secure the file
   // -> copy the content
   // -> make it rw by root:root
-  file::Clone(src_fd, dst_fd, true);
+  file::Clone(conf_fd, tmp_fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
-  if (fchmod(dst_fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0) {
-    throw suex::PermissionError(
-        "couldn't update temp configuration file ownership: %s",
-        std::strerror(errno));
-  }
-
+  std::string tmp_path{utils::path::GetPath(tmp_fd)};
   std::string editor{utils::GetEditor()};
   std::vector<char *> cmdargv{utils::ConstCorrect(editor.c_str()),
-                              utils::ConstCorrect(tmp_conf.c_str()), nullptr};
+                              utils::ConstCorrect(tmp_path.c_str()), nullptr};
 
-  // loop until configuration is valid or user asked to stop
-  // also turn on verbose output when editing
-  TurnOnVerboseOutput(permissions);
   while (true) {
     pid_t pid = fork();
 
@@ -156,53 +144,52 @@ void suex::EditConfiguration(const OptArgs &opts,
 
     // parent process should wait until the child exists
     int status;
-
     while (-1 == waitpid(pid, &status, 0)) {
-      // wait...
     };
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
       throw std::runtime_error("error while waiting for $EDITOR");
     }
 
-    // we can't secure files that have write permissions
-    if (fchmod(dst_fd, S_IRUSR | S_IRGRP) < 0) {
-      throw suex::PermissionError(
-          "couldn't update temp configuration file ownership: %s",
-          std::strerror(errno));
-    }
-
-    // update the file permissions after editing it
-    if (Permissions::Validate(tmp_conf, opts.AuthStyle())) {
-      file::Clone(dst_fd, src_fd, true);
-      std::cout << PATH_CONFIG << " changes applied." << std::endl;
-      return;
+    if (Permissions(tmp_fd, opts.AuthStyle()).Load().Size() > 0) {
+      break;
     }
 
     std::string prompt{
         Sprintf("%s is invalid. Do you want to try again?", PATH_CONFIG)};
     if (!utils::AskQuestion(prompt)) {
-      std::cout << PATH_CONFIG << " changes discarded." << std::endl;
+      std::cerr << PATH_CONFIG << " changes discarded." << std::endl;
       return;
     }
   }
+
+  struct flock write_lock = {0};
+  write_lock.l_type = F_WRLCK;
+  if (fcntl(conf_fd, F_OFD_SETLKW, &write_lock) < 0) {
+    throw suex::IOError("Error when locking configuration: %s",
+                        strerror(errno));
+  }
+
+  DEFER({
+    write_lock.l_type = F_UNLCK;
+    fcntl(conf_fd, F_OFD_SETLKW, &write_lock);
+  });
+
+  file::Clone(tmp_fd, conf_fd, S_IRUSR | S_IRGRP);
+  std::cout << PATH_CONFIG << " changes applied." << std::endl;
 }
 
 void suex::CheckConfiguration(const OptArgs &opts) {
   if (opts.CommandArguments().empty()) {
-    if (!Permissions::Validate(opts.ConfigPath(), opts.AuthStyle())) {
+    int fd = file::Open(opts.ConfigPath(), O_RDONLY);
+    if (Permissions(fd, opts.AuthStyle()).Load().Size() <= 0) {
       throw suex::ConfigError("configuration is not valid");
     }
 
-    if (opts.ConfigPath() == PATH_CONFIG &&
-        !file::IsSecure(opts.ConfigPath())) {
-      throw suex::ConfigError("configuration file is not secure");
-    }
     // done here...
     return;
   }
 
-  Permissions perms{opts.ConfigPath(), opts.AuthStyle()};
-
+  auto perms = Permissions(opts.ConfigPath(), opts.AuthStyle()).Load();
   auto perm = perms.Get(opts.AsUser(), opts.CommandArguments());
   if (perm == nullptr || perm->Deny()) {
     std::cout << "deny" << std::endl;

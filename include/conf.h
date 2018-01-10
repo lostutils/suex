@@ -1,5 +1,6 @@
 #pragma once
 
+#include <file.h>
 #include <optarg.h>
 #include <perm.h>
 #include <re2/re2.h>
@@ -8,7 +9,6 @@
 
 namespace suex::permissions {
 
-#define MAX_LINE 65535
 #define MAX_FILE_SIZE 8192
 
 const RE2 &PermissionsOptionsRegex();
@@ -16,26 +16,41 @@ const RE2 &PermissionLineRegex();
 const RE2 &CommentLineRegex();
 const RE2 &EmptyLineRegex();
 
+struct Line {
+  std::string txt;
+  int lineno;
+};
+
 class Permissions {
  private:
   typedef std::vector<Entity> Collection;
   std::string auth_style_;
-  bool secure_;
   std::vector<Entity> perms_{};
-  void ParseLine(int lineno, const std::string &line, bool only_user);
-  void Parse(const std::string &path, bool only_user);
+  int fd_{-1};
+  bool auto_close_{false};
+  void Parse(const struct Line &line,
+             std::function<void(const Entity &)> &&callback);
 
  public:
   typedef Collection::const_iterator const_iterator;
 
-  explicit Permissions(const std::string &path, std::string auth_style,
-                       bool only_user = true);
+  Permissions(Permissions &other) noexcept;
 
-  static bool Validate(const std::string &path, const std::string &auth_style);
+  ~Permissions();
+
+  Permissions(const Permissions &) = delete;
+
+  void operator=(const Permissions &) = delete;
+
+  Permissions &Load();
+
+  explicit Permissions(const std::string &path, std::string auth_style);
+
+  explicit Permissions(int fd, std::string auth_style);
 
   std::string AuthStyle() const { return auth_style_; }
 
-  bool Privileged() const {
+  static bool Privileged() {
     return WheelGroup().Contains(RunningUser()) || RunningUser() == RootUser();
   }
 
