@@ -6,6 +6,13 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "CPU architecture '${CMAKE_SYSTEM_NAME}' not supported")
 endif ()
 
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+endif()
+
+
 # void ptr = 8 byte --> x86_64 || void ptr != 8 byte --> x86
 if (CMAKE_SIZEOF_VOID_P MATCHES 8)
     set(CPU_ARCH "amd64")
