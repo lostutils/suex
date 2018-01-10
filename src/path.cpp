@@ -1,4 +1,5 @@
 #include <exceptions.h>
+#include <file.h>
 #include <logger.h>
 #include <climits>
 #include <gsl/gsl>
@@ -10,9 +11,7 @@ const std::string utils::path::Locate(const std::string &path,
     throw suex::IOError("path '%s' is empty", path.c_str());
   }
 
-  struct stat st {
-    0
-  };
+  file::stat_t st{0};
   if (stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode)) {
     return path;
   }
@@ -33,10 +32,8 @@ const std::string utils::path::Locate(const std::string &path,
 }
 
 bool utils::path::Exists(const std::string &path) {
-  struct stat fstat {
-    0
-  };
-  return stat(path.c_str(), &fstat) == 0;
+  file::stat_t status{0};
+  return stat(path.c_str(), &status) == 0;
 }
 const std::string utils::path::Readlink(int fd) {
   std::string path{GetPath(fd)};

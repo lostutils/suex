@@ -1,9 +1,7 @@
 #include <actions.h>
 #include <auth.h>
-#include <exceptions.h>
 #include <logger.h>
 #include <version.h>
-#include <gsl/gsl>
 
 using suex::optargs::OptArgs;
 using suex::permissions::Permissions;
@@ -15,9 +13,7 @@ void ShowUsage() {
 }
 
 void CreateRuntimeDirectories() {
-  struct stat fstat {
-    0
-  };
+  file::stat_t fstat{0};
   if (stat(PATH_VAR_RUN, &fstat) != 0) {
     throw suex::IOError(std::strerror(errno));
   }
@@ -132,8 +128,10 @@ int Do(const Permissions &permissions, const OptArgs &opts) {
   }
 
   std::vector<char *> envs;
-
-  SwitchUserAndExecute(opts.AsUser(), opts.CommandArguments().data(),
+  logger::debug() << "executing: "
+                  << utils::CommandArgsText(opts.CommandArguments())
+                  << std::endl;
+  SwitchUserAndExecute(opts.AsUser(), opts.CommandArguments(),
                        GetEnv(&envs, permissions, opts));
   return 0;
 }

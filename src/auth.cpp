@@ -1,13 +1,9 @@
 #include <auth.h>
 #include <conf.h>
-#include <exceptions.h>
-#include <file.h>
 #include <glob.h>
 #include <logger.h>
 
-#include <fcntl.h>
 #include <security/pam_misc.h>
-#include <gsl/gsl>
 #include <sstream>
 
 struct auth_data {
@@ -27,7 +23,7 @@ std::string GetTokenName(const std::string &style,
   return prefix + suffix;
 }
 
-std::string GetFilepath(const std::string &style,
+std::string GetFilePath(const std::string &style,
                         const std::string &cache_token) {
   std::stringstream ss;
   ss << PATH_SUEX_TMP << "/" << GetTokenName(style, cache_token) << getsid(0);
@@ -35,39 +31,30 @@ std::string GetFilepath(const std::string &style,
 }
 
 time_t SetToken(time_t ts, const std::string &filename) {
-  int fd =
-      file::Open(filename, O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IRGRP);
-  DEFER(file::Close(fd));
+  file::File f{filename, O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IRGRP};
   std::string txt{std::to_string(ts)};
-  file::Write(fd, gsl::make_span(txt.c_str(), txt.size()));
+  f.Write(gsl::make_span(txt.c_str(), txt.size()));
   return ts;
 }
 
 time_t GetToken(const std::string &filename) {
-  int fd = file::Open(filename, O_CREAT | O_RDONLY);
-  DEFER(file::Close(fd));
-  struct stat st {
-    0
-  };
-  if (fstat(fd, &st) != 0) {
-    throw suex::IOError("couldn't open token file for reading");
-  }
+  file::File f{filename, O_CREAT | O_RDONLY};
 
-  if (!S_ISREG(st.st_mode)) {
+  if (!S_ISREG(f.Mode())) {
     throw suex::IOError("auth timestamp is not a file");
   }
 
-  if (!file::IsSecure(fd)) {
+  if (!f.IsSecure()) {
     throw suex::PermissionError("auth timestamp file has invalid permissions");
   }
 
-  if (file::Size(fd) > MAX_FILE_SIZE) {
+  if (f.Size() > MAX_FILE_SIZE) {
     throw suex::PermissionError("auth timestamp file is too big");
   }
 
-  char buff[st.st_size];
-  auto buff_view = gsl::make_span(static_cast<char *>(buff), st.st_size);
-  ssize_t bytes = file::Read(fd, buff_view);
+  char buff[f.Size()];
+  auto buff_view = gsl::make_span(static_cast<char *>(buff), f.Size());
+  ssize_t bytes = f.Read(buff_view);
 
   time_t ts{0};
   if (bytes > 0) {
@@ -108,7 +95,7 @@ int auth::ClearTokens(const std::string &style) {
   auto paths = gsl::make_span(globbuf.gl_pathv, globbuf.gl_pathc);
   for (std::string token_path : paths) {
     logger::debug() << "clearing: " << token_path << std::endl;
-    if (!file::Remove(token_path, true)) {
+    if (!file::File(token_path, O_RDONLY).Remove(true)) {
       return -1;
     }
   }
@@ -132,7 +119,7 @@ bool auth::Authenticate(const std::string &style, bool prompt,
                           style.c_str());
   }
 
-  std::string ts_filename{GetFilepath(style, cache_token)};
+  std::string ts_filename{GetFilePath(style, cache_token)};
 
   if (!cache_token.empty()) {
     // check timestamp validity
@@ -141,7 +128,7 @@ bool auth::Authenticate(const std::string &style, bool prompt,
 
     if (ts < 0 || now < ts) {
       logger::warning() << "invalid auth timestamp: " << ts << std::endl;
-      file::Remove(ts_filename, false);
+      file::File(ts_filename, O_RDONLY).Remove(false);
       return false;
     }
 

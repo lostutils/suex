@@ -1,9 +1,7 @@
 #include <auth.h>
 #include <conf.h>
-#include <exceptions.h>
 #include <logger.h>
 #include <version.h>
-#include <gsl/gsl>
 
 using suex::optargs::OptArgs;
 

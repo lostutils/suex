@@ -1,12 +1,8 @@
 #include <actions.h>
 #include <auth.h>
-#include <exceptions.h>
-#include <fcntl.h>
-#include <file.h>
 #include <logger.h>
 #include <version.h>
 #include <wait.h>
-#include <cstring>
 #include <sstream>
 
 using suex::permissions::Permissions;
@@ -46,7 +42,8 @@ const permissions::Entity *suex::Permit(const Permissions &permissions,
   return perm;
 }
 
-void suex::SwitchUserAndExecute(const User &user, char *const cmdargv[],
+void suex::SwitchUserAndExecute(const User &user,
+                                const std::vector<char *> &cmdargv,
                                 char *const envp[]) {
   // update the HOME env according to the as_user dir
   setenv("HOME", user.HomeDirectory().c_str(), 1);
@@ -56,7 +53,11 @@ void suex::SwitchUserAndExecute(const User &user, char *const cmdargv[],
 
   // execute with uid and gid. path lookup is done internally, so execvp is not
   // needed.
-  execvpe(*cmdargv, &(*cmdargv), envp);
+
+  logger::debug() << "executing: " << utils::CommandArgsText(cmdargv)
+                  << std::endl;
+
+  execvpe(*cmdargv.data(), &(*cmdargv.data()), envp);
 }
 
 void suex::TurnOnVerboseOutput() {
@@ -91,15 +92,13 @@ void suex::EditConfiguration(const OptArgs &opts,
     throw suex::PermissionError("Incorrect password");
   }
 
-  int edit_fd = file::Open(PATH_EDIT_LOCK, O_CREAT | O_RDWR);
-  DEFER({
-    file::Close(edit_fd);
-    file::Remove(PATH_EDIT_LOCK);
-  });
+  file::File edit_f{PATH_EDIT_LOCK, O_CREAT | O_RDWR};
+
+  DEFER({ edit_f.Remove(); });
 
   struct flock edit_lock = {0};
   edit_lock.l_type = F_WRLCK;
-  if (fcntl(edit_fd, F_OFD_SETLK, &edit_lock) < 0) {
+  if (edit_f.Control(F_OFD_SETLK, &edit_lock) < 0) {
     std::string txt{
         Sprintf("Error when locking configuration: %s", strerror(errno))};
     if (errno == EAGAIN || errno == EACCES) {
@@ -110,25 +109,20 @@ void suex::EditConfiguration(const OptArgs &opts,
 
   DEFER({
     edit_lock.l_type = F_UNLCK;
-    fcntl(edit_fd, F_OFD_SETLKW, &edit_lock);
+    edit_f.Control(F_OFD_SETLKW, &edit_lock);
   });
 
-  int conf_fd = file::Open(PATH_CONFIG, O_RDWR);
-  DEFER(file::Close(conf_fd));
+  file::File conf_f(PATH_CONFIG, O_RDWR);
+  file::File tmp_f(PATH_TMP, O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IRGRP);
 
-  int tmp_fd =
-      file::Open(PATH_TMP, O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IRGRP);
-  DEFER(file::Close(tmp_fd));
+  conf_f.Clone(tmp_f, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
-  // secure the file
-  // -> copy the content
-  // -> make it rw by root:root
-  file::Clone(conf_fd, tmp_fd, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+  Permissions perms{tmp_f, opts.AuthStyle()};
 
-  std::string tmp_path{utils::path::GetPath(tmp_fd)};
   std::string editor{utils::GetEditor()};
-  std::vector<char *> cmdargv{utils::ConstCorrect(editor.c_str()),
-                              utils::ConstCorrect(tmp_path.c_str()), nullptr};
+  std::vector<char *> cmdargv{
+      utils::ConstCorrect(editor.c_str()),
+      utils::ConstCorrect(tmp_f.DescriptorPath().c_str()), nullptr};
 
   while (true) {
     pid_t pid = fork();
@@ -139,7 +133,7 @@ void suex::EditConfiguration(const OptArgs &opts,
 
     // child process should run the editor
     if (pid == 0) {
-      suex::SwitchUserAndExecute(RootUser(), cmdargv.data(), suex::env::Raw());
+      suex::SwitchUserAndExecute(RootUser(), cmdargv, suex::env::Raw());
     }
 
     // parent process should wait until the child exists
@@ -150,7 +144,7 @@ void suex::EditConfiguration(const OptArgs &opts,
       throw std::runtime_error("error while waiting for $EDITOR");
     }
 
-    if (Permissions(tmp_fd, opts.AuthStyle()).Load().Size() > 0) {
+    if (perms.Reload().Size() > 0) {
       break;
     }
 
@@ -164,24 +158,24 @@ void suex::EditConfiguration(const OptArgs &opts,
 
   struct flock write_lock = {0};
   write_lock.l_type = F_WRLCK;
-  if (fcntl(conf_fd, F_OFD_SETLKW, &write_lock) < 0) {
+  if (conf_f.Control(F_OFD_SETLKW, &write_lock) < 0) {
     throw suex::IOError("Error when locking configuration: %s",
                         strerror(errno));
   }
 
   DEFER({
     write_lock.l_type = F_UNLCK;
-    fcntl(conf_fd, F_OFD_SETLKW, &write_lock);
+    conf_f.Control(F_OFD_SETLKW, &write_lock);
   });
 
-  file::Clone(tmp_fd, conf_fd, S_IRUSR | S_IRGRP);
+  tmp_f.Clone(conf_f, S_IRUSR | S_IRGRP);
   std::cout << PATH_CONFIG << " changes applied." << std::endl;
 }
 
 void suex::CheckConfiguration(const OptArgs &opts) {
   if (opts.CommandArguments().empty()) {
-    int fd = file::Open(opts.ConfigPath(), O_RDONLY);
-    if (Permissions(fd, opts.AuthStyle()).Load().Size() <= 0) {
+    file::File f{opts.ConfigPath(), O_RDONLY};
+    if (Permissions(f, opts.AuthStyle()).Load().Size() <= 0) {
       throw suex::ConfigError("configuration is not valid");
     }
 

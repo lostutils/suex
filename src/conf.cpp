@@ -1,12 +1,7 @@
 #include <conf.h>
-#include <exceptions.h>
-#include <fcntl.h>
-#include <file.h>
 #include <glob.h>
 #include <logger.h>
 #include <rx.h>
-#include <climits>
-#include <gsl/gsl>
 #include <sstream>
 
 using suex::permissions::Entity;
@@ -18,15 +13,9 @@ using suex::permissions::Group;
 permissions::Permissions::Permissions(Permissions &other) noexcept
     : auth_style_{std::move(other.auth_style_)},
       perms_{std::move(other.perms_)},
-      fd_{other.fd_},
-      auto_close_{other.auto_close_} {
+      f_{other.f_} {
   other.perms_ = std::vector<Entity>();
-  other.fd_ = -1;
-}
-permissions::Permissions::~Permissions() {
-  if (fd_ != -1 && auto_close_) {
-    file::Close(fd_);
-  }
+  other.f_.SuppressClose();
 }
 
 void ProcessEnv(const std::string &txt, Entity::EnvToAdd *upsert,
@@ -90,9 +79,7 @@ const std::vector<User> &GetUsers(const std::string &user,
 }
 
 bool IsExecutable(const std::string &path) {
-  struct stat st {
-    0
-  };
+  file::stat_t st{0};
   if (stat(path.c_str(), &st) < 0) {
     throw suex::IOError("couldn't get executable stat");
   }
@@ -176,7 +163,7 @@ void ParseOptions(const std::string &options, bool *nopass, bool *keepenv,
 }
 
 void permissions::Permissions::Parse(
-    const struct Line &line, std::function<void(const Entity &)> &&callback) {
+    const file::line_t &line, std::function<void(const Entity &)> &&callback) {
   logger::debug() << "parsing line " << line.lineno << ": '" << line.txt << "'"
                   << std::endl;
 
@@ -256,67 +243,60 @@ const Entity *Permissions::Get(const permissions::User &user,
   return perm;
 }
 
-Permissions::Permissions(int fd, std::string auth_style)
-    : auth_style_{std::move(auth_style)}, fd_{fd}, auto_close_{false} {}
+Permissions::Permissions(file::File &f, std::string auth_style)
+    : auth_style_{std::move(auth_style)}, f_{f} {}
 
 Permissions::Permissions(const std::string &path, std::string auth_style)
     : auth_style_{std::move(auth_style)},
-      fd_{file::Open(path, O_CREAT | O_RDONLY, S_IRUSR | S_IRGRP)},
-      auto_close_{true} {}
+      f_{path, O_CREAT | O_RDONLY, S_IRUSR | S_IRGRP} {}
+
+Permissions &Permissions::Reload() {
+  if (!perms_.empty()) {
+    perms_.clear();
+  }
+  return Load();
+}
 
 Permissions &Permissions::Load() {
-  std::string path{utils::path::Readlink(fd_)};
+  if (!perms_.empty()) {
+    throw ConfigError("not allowed to reload configuration");
+  }
 
   struct flock write_lock = {0};
-  if (path == PATH_CONFIG) {
+  if (f_.Path() == PATH_CONFIG) {
     write_lock.l_type = F_RDLCK;
-    logger::debug() << "acquiring lock on " << path << std::endl;
-    if (fcntl(fd_, F_OFD_SETLKW, &write_lock) < 0) {
+    logger::debug() << "acquiring lock on " << f_.Path() << std::endl;
+    if (f_.Control(F_OFD_SETLKW, &write_lock) < 0) {
       throw suex::IOError("Error when locking configuration: %s",
                           strerror(errno));
     }
   }
 
-  DEFER(if (path == PATH_CONFIG) {
+  DEFER(if (f_.Path() == PATH_CONFIG) {
     write_lock.l_type = F_UNLCK;
-    fcntl(fd_, F_OFD_SETLKW, &write_lock);
+    f_.Control(F_OFD_SETLKW, &write_lock);
   });
 
-  logger::debug() << "parsing '" << path << "' (fd " << fd_ << ")" << std::endl;
-  if (path == PATH_CONFIG && !file::IsSecure(fd_)) {
-    throw suex::PermissionError("'%s' is not secure", path.c_str());
+  logger::debug() << "parsing '" << f_.String() << std::endl;
+  if (f_.Path() == PATH_CONFIG && !f_.IsSecure()) {
+    throw suex::PermissionError("'%s' is not secure", f_.Path().c_str());
   }
 
-  if (file::Size(fd_) > MAX_FILE_SIZE) {
+  if (f_.Size() > MAX_FILE_SIZE) {
     throw suex::PermissionError("'%s' size is %ld, which is not supported",
-                                path.c_str(), file::Size(fd_));
+                                f_.Path().c_str(), f_.Size() / 1024.0);
   }
 
-  char *line = nullptr;
-
-  // fdopen should have seeked to the beginning of the file
-  // but in practice, it doesn't always work.
-  off_t fd_pos = file::Tell(fd_);
-  DEFER(file::Seek(fd_, fd_pos, SEEK_SET));
-  file::Seek(fd_, 0, SEEK_SET);
-
-  FILE *f{fdopen(fd_, "r")};
-  if (f == nullptr) {
-    throw suex::IOError("error opening '%d' for reading: %s", fd_,
-                        std::strerror(errno));
-  }
-  for (int lineno = 1; file::ReadLine(f, &line); lineno++) {
-    try {
-      Line meta{.lineno = lineno, .txt = line};
-      Parse(meta, [&](const Entity &e) { perms_.emplace_back(e); });
-
-    } catch (SuExError &e) {
-      // configuration is invalid.
-      // clear all loaded permissions and log
-      perms_.clear();
-      logger::error() << e.what() << std::endl;
-      return *this;
-    }
+  try {
+    f_.ReadLine([&](const file::line_t &line) {
+      Parse(line, [&](const Entity &e) { perms_.emplace_back(e); });
+    });
+  } catch (SuExError &e) {
+    // configuration is invalid.
+    // clear all loaded permissions and log
+    perms_.clear();
+    logger::error() << e.what() << std::endl;
+    return *this;
   }
 
   // if the user is privileged, add an "all rule" to the

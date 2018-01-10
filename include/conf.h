@@ -9,26 +9,22 @@
 
 namespace suex::permissions {
 
-#define MAX_FILE_SIZE 8192
+#define MAX_FILE_SIZE (8192 * 1024)
 
 const RE2 &PermissionsOptionsRegex();
 const RE2 &PermissionLineRegex();
 const RE2 &CommentLineRegex();
 const RE2 &EmptyLineRegex();
 
-struct Line {
-  std::string txt;
-  int lineno;
-};
-
 class Permissions {
  private:
   typedef std::vector<Entity> Collection;
+
   std::string auth_style_;
   std::vector<Entity> perms_{};
-  int fd_{-1};
-  bool auto_close_{false};
-  void Parse(const struct Line &line,
+  file::File f_;
+
+  void Parse(const file::line_t &line,
              std::function<void(const Entity &)> &&callback);
 
  public:
@@ -36,17 +32,19 @@ class Permissions {
 
   Permissions(Permissions &other) noexcept;
 
-  ~Permissions();
-
   Permissions(const Permissions &) = delete;
+
+  ~Permissions() = default;
 
   void operator=(const Permissions &) = delete;
 
   Permissions &Load();
 
+  Permissions &Reload();
+
   explicit Permissions(const std::string &path, std::string auth_style);
 
-  explicit Permissions(int fd, std::string auth_style);
+  explicit Permissions(file::File &f, std::string auth_style);
 
   std::string AuthStyle() const { return auth_style_; }
 

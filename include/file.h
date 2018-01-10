@@ -1,30 +1,90 @@
 #pragma once
+#include <exceptions.h>
+#include <fcntl.h>
+#include <path.h>
+#include <sys/stat.h>
 #include <gsl/gsl>
 #include <string>
 
 namespace suex::file {
 
-double Size(int fd);
+struct line_t {
+  std::string txt;
+  int lineno;
+};
 
-bool Remove(const std::string &path, bool silent = false);
+typedef struct stat stat_t;
 
-bool IsSecure(int fd);
+class File {
+ public:
+  explicit File(int fd);
 
-int Open(const std::string &pathname, int flags);
+  template <typename... Args>
+  explicit File(const std::string &path, int flags, Args &&... args) {
+    fd_ = open(path.c_str(), flags, args...);
+    if (fd_ < 0) {
+      throw suex::IOError("error opening '%s': %s", path.c_str(),
+                          std::strerror(errno));
+    }
+    path_ = utils::path::Readlink(fd_);
+    internal_path_ = utils::path::GetPath(fd_);
+  }
 
-int Open(const std::string &pathname, int flags, mode_t mode);
+  File(const File &) = delete;
 
-void Close(int fd);
+  File(File &other) noexcept;
 
-void Clone(int src_fd, int dst_fd, mode_t mode);
+  ~File();
 
-off_t Seek(int fd, off_t offset, int whence);
+  void operator=(const File &) = delete;
 
-ssize_t Read(int fd, gsl::span<char> buff);
+  off_t Size() const;
 
-ssize_t Write(int fd, gsl::span<const char> buff);
+  void SuppressClose();
 
-off_t Tell(int fd);
+  mode_t Mode() const;
 
-bool ReadLine(FILE *f, char *line[]);
+  bool Remove(bool silent = false);
+
+  bool IsSecure() const;
+
+  off_t Tell() const;
+
+  void Clone(File &other, mode_t mode) const;
+
+  off_t Seek(off_t offset, int whence) const;
+
+  const std::string &Path() const;
+
+  const std::string &DescriptorPath() const;
+
+  ssize_t Read(gsl::span<char> buff) const;
+
+  ssize_t Write(gsl::span<const char> buff) const;
+
+  std::string String() const;
+
+  bool Valid() const;
+
+  void ReadLine(std::function<void(const line_t &)> &&callback);
+
+  template <typename... Args>
+  int Control(int cmd, Args &&... args) const {
+    int ret = fcntl(fd_, cmd, args...);
+    if (ret < 0) {
+      throw suex::IOError("fcntl(%d) failed", fd_, strerror(errno));
+    }
+    return ret;
+  }
+
+ private:
+  int fd_{-1};
+  std::string path_{};
+  std::string internal_path_{};
+  bool auto_close_{true};
+
+  const stat_t Status() const;
+  void Invalidate();
+  void Close();
+};
 }
