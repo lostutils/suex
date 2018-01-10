@@ -64,8 +64,6 @@ class File {
 
   std::string String() const;
 
-  bool Valid() const;
-
   void ReadLine(std::function<void(const line_t &)> &&callback);
 
   template <typename... Args>

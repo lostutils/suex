@@ -31,22 +31,6 @@ bool utils::BypassPermissions(const User &as_user) {
          RunningUser().GroupId() == as_user.GroupId();
 }
 
-const std::string utils::Iso8601() {
-  auto t = std::time(nullptr);
-  auto tm = *std::localtime(&t);
-
-  std::ostringstream oss;
-  oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-  return oss.str();
-}
-
-const std::string utils::ToString(char *txt) {
-  if (txt == nullptr) {
-    return "";
-  }
-  return std::string(txt);
-}
-
 std::string utils::GetEditor() {
   std::string editor{env::Get("EDITOR")};
 

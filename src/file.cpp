@@ -30,9 +30,6 @@ bool file::File::IsSecure() const {
 off_t file::File::Tell() const { return Seek(0, SEEK_CUR); }
 
 void file::File::Close() {
-  if (!Valid()) {
-    return;
-  }
   DEFER(Invalidate());
   if (close(fd_) < 0) {
     throw suex::IOError("error closing '%d': %s", fd_, std::strerror(errno));
@@ -46,15 +43,16 @@ void file::File::Clone(file::File &other, mode_t mode) const {
   logger::debug() << "cloning " << path_ << "(" << st.st_size << " bytes) -> "
                   << other.path_ << std::endl;
 
-  /* seek to the beginning of the other,
-   * but don't forget to go back to the previous location */
-  off_t src_pos = Tell();
-  DEFER(Seek(src_pos, SEEK_SET));
+  /* seek to the beginning of this file, but go back to the same poisition when
+   * done */
+  off_t pre_clone_pos = Tell();
+  DEFER(Seek(pre_clone_pos, SEEK_SET));
   Seek(0, SEEK_SET);
 
-  off_t dst_pos = other.Tell();
-  DEFER(other.Seek(dst_pos, SEEK_SET));
-  other.Seek(0, SEEK_SET);
+  if (ftruncate(other.fd_, 0) < 0) {
+    throw suex::IOError("can't clone '%d to '%d'. truncate(%d) failed: %s", fd_,
+                        other.fd_, other.fd_, std::strerror(errno));
+  }
 
   if (sendfile(other.fd_, fd_, nullptr, static_cast<size_t>(st.st_size)) < 0) {
     throw suex::IOError("can't clone '%d to '%d'. sendfile() failed: %s", fd_,
@@ -102,15 +100,6 @@ file::File::File(int fd)
       path_{utils::path::Readlink(fd)},
       internal_path_{utils::path::GetPath(fd)} {}
 
-bool file::File::Valid() const {
-  if (fd_ == -1) {
-    return false;
-  }
-
-  // if fd > 0, really check the fd
-  return fcntl(fd_, F_GETFD) == 0;
-}
-
 file::File::File(file::File &other) noexcept {
   fd_ = other.fd_;
   path_ = other.path_;
@@ -154,9 +143,17 @@ void file::File::ReadLine(
   }
 }
 file::File::~File() {
-  if (Valid() && !auto_close_) {
-    Close();
+  // can't close this file
+  if (fd_ == -1 || !auto_close_) {
+    return;
   }
+
+  // if fd > 0, really check the fd
+  if (fcntl(fd_, F_GETFD) != 0) {
+    return;
+  }
+
+  Close();
 }
 
 const file::stat_t file::File::Status() const {

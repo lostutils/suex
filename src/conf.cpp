@@ -310,6 +310,7 @@ Permissions &Permissions::Load() {
 
   return *this;
 }
+
 const re2::RE2 &permissions::PermissionsOptionsRegex() {
   static const re2::RE2 re{R"((nopass|persist|keepenv|setenv\s\{.*\}))"};
   if (!re.ok()) {

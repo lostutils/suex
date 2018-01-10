@@ -27,10 +27,6 @@ inline T *ConstCorrect(T const *ptr) {
 
 bool BypassPermissions(const suex::permissions::User &as_user);
 
-const std::string Iso8601();
-
-const std::string ToString(char *txt);
-
 bool AskQuestion(const std::string &prompt);
 
 std::string GetEditor();
