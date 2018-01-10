@@ -1,2 +1,2 @@
 #!/usr/bin/env fish
-cd $ROOTDIR/build;and make clean 
+rm -rfv $ROOTDIR/{bin,build}

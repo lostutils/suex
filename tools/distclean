@@ -1,2 +1,2 @@
 #!/usr/bin/env fish
-cd $ROOTDIR/build;and make distclean
+rm -rfv $ROOTDIR/{bin,build,deps}

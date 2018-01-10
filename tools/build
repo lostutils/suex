@@ -1,2 +1,2 @@
 #!/usr/bin/env fish
-cd $ROOTDIR/build;and make -j (nproc)
+cd $ROOTDIR/build;and ninja
