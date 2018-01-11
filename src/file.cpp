@@ -104,12 +104,6 @@ file::File::File(file::File &other) noexcept {
   fd_ = other.fd_;
   path_ = other.path_;
   internal_path_ = other.internal_path_;
-  auto_close_ = other.auto_close_;
-}
-
-void file::File::SuppressClose() {
-  // doesn't need to close
-  auto_close_ = false;
 }
 
 std::string file::File::String() const {
@@ -143,17 +137,9 @@ void file::File::ReadLine(
   }
 }
 file::File::~File() {
-  // can't close this file
-  if (fd_ == -1 || !auto_close_) {
-    return;
+  if (Control(F_GETFD) > 0) {
+    Close();
   }
-
-  // if fd > 0, really check the fd
-  if (fcntl(fd_, F_GETFD) != 0) {
-    return;
-  }
-
-  Close();
 }
 
 const file::stat_t file::File::Status() const {

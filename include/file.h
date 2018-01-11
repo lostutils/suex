@@ -40,8 +40,6 @@ class File {
 
   off_t Size() const;
 
-  void SuppressClose();
-
   mode_t Mode() const;
 
   bool Remove(bool silent = false);
@@ -64,6 +62,8 @@ class File {
 
   std::string String() const;
 
+  void Invalidate();
+
   void ReadLine(std::function<void(const line_t &)> &&callback);
 
   template <typename... Args>
@@ -79,10 +79,8 @@ class File {
   int fd_{-1};
   std::string path_{};
   std::string internal_path_{};
-  bool auto_close_{true};
 
   const stat_t Status() const;
-  void Invalidate();
   void Close();
 };
 }

@@ -15,7 +15,7 @@ permissions::Permissions::Permissions(Permissions &other) noexcept
       perms_{std::move(other.perms_)},
       f_{other.f_} {
   other.perms_ = std::vector<Entity>();
-  other.f_.SuppressClose();
+  other.f_.Invalidate();
 }
 
 void ProcessEnv(const std::string &txt, Entity::EnvToAdd *upsert,
