@@ -6,15 +6,12 @@
 using suex::permissions::User;
 
 std::string utils::CommandArgsText(const std::vector<char *> &cmdargv) {
-  std::stringstream ss;
-
-  auto span = gsl::make_span(cmdargv);
-
-  for (char *q : span.subspan(0, cmdargv.size() - 2)) {
+  std::ostringstream ss;
+  for (char *q : gsl::make_span(cmdargv).subspan(0, cmdargv.size() - 2)) {
     ss << q << " ";
   }
 
-  ss << span[cmdargv.size() - 2];
+  ss << cmdargv[cmdargv.size() - 2];
 
   return ss.str();
 }

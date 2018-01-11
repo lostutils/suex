@@ -107,7 +107,7 @@ file::File::File(file::File &other) noexcept {
 }
 
 std::string file::File::String() const {
-  std::stringstream ss;
+  std::ostringstream ss;
   ss << Path() << "' (fd " << fd_ << ")";
   return ss.str();
 }

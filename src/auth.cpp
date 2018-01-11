@@ -25,7 +25,7 @@ std::string GetTokenName(const std::string &style,
 
 std::string GetFilePath(const std::string &style,
                         const std::string &cache_token) {
-  std::stringstream ss;
+  std::ostringstream ss;
   ss << PATH_SUEX_TMP << "/" << GetTokenName(style, cache_token) << getsid(0);
   return ss.str();
 }

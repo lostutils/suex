@@ -127,12 +127,9 @@ int Do(const Permissions &permissions, const OptArgs &opts) {
     return 1;
   }
 
-  std::vector<char *> envs;
-  logger::debug() << "executing: "
-                  << utils::CommandArgsText(opts.CommandArguments())
-                  << std::endl;
+  std::vector<char *> environ;
   SwitchUserAndExecute(opts.AsUser(), opts.CommandArguments(),
-                       GetEnv(&envs, permissions, opts));
+                       GetEnv(&environ, permissions, opts));
   return 0;
 }
 

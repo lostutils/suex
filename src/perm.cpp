@@ -10,7 +10,7 @@ std::ostream &permissions::operator<<(std::ostream &os, const Entity &entity) {
   os << (entity.Deny() ? "deny" : "permit") << " " << entity.Owner().Name()
      << " as " << entity.AsUser().Name() << " ";
 
-  std::stringstream opts_ss;
+  std::ostringstream opts_ss;
   opts_ss << (entity.PromptForPassword() ? "" : "nopass ")
           << (entity.KeepEnvironment() ? "keepenv " : "")
           << (entity.CacheAuth() ? "persist " : "");

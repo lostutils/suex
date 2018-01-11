@@ -25,7 +25,7 @@ const permissions::Entity *suex::Permit(const Permissions &permissions,
                                         const OptArgs &opts) {
   auto perm = permissions.Get(opts.AsUser(), opts.CommandArguments());
   if (perm == nullptr || perm->Deny()) {
-    std::stringstream ss;
+    std::ostringstream ss;
     throw suex::PermissionError(
         "You are not allowed to execute '%s' as %s",
         utils::CommandArgsText(opts.CommandArguments()).c_str(),
