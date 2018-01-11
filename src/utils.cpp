@@ -42,10 +42,11 @@ std::string utils::GetEditor() {
 }
 
 bool utils::AskQuestion(const std::string &prompt) {
-  std::string ans;
   std::cout << prompt << " ";
+  std::string ans;
   std::getline(std::cin, ans);
-  return re2::RE2::FullMatch(ans, re2::RE2("y|yes"));
+  std::transform(ans.begin(), ans.end(), ans.begin(), ::tolower);
+  return ans == "y" || ans == "yes";
 }
 
 const suex::permissions::User &RunningUser() {
