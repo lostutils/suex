@@ -96,10 +96,9 @@ int Do(const Permissions &permissions, const OptArgs &opts) {
 
   // up to here, we don't check if the file is valid
   // because the edit config command can edit invalid files
-  if (permissions.Size() <= 0) {
-    throw suex::PermissionError(
-        "suex.conf is either invalid or empty.\n"
-        "! notice that you're not a member of 'wheel'");
+  if (permissions.Empty()) {
+    std::cerr << "! notice that you're not a member of 'wheel'" << std::endl;
+    throw suex::PermissionError("suex.conf is either invalid or empty");
   }
 
   if (opts.ListPermissions()) {

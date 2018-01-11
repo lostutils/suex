@@ -56,6 +56,8 @@ class Permissions {
 
   unsigned long Size() const { return perms_.size(); };
 
+  bool Empty() const { return perms_.empty(); };
+
   const_iterator begin() const { return perms_.cbegin(); };
 
   const_iterator end() const { return perms_.cend(); };
