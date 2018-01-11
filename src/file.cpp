@@ -128,6 +128,7 @@ void file::File::ReadLine(
   ssize_t read{0};
 
   char *line = nullptr;
+  DEFER(if (line != nullptr) delete (line));
   for (int lineno = 1; (read = getline(&line, &len, f)) != -1; lineno++) {
     if (line[read - 1] == '\n') {
       line[read - 1] = '\0';
