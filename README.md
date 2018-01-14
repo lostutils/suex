@@ -12,6 +12,11 @@ The gist is that `sudo` is hard to configure and does a lot more then the standa
 
 `doas` was created in order to replace `sudo` for regular folks like me and you.
 
+<a href="https://scan.coverity.com/projects/odedlaz-suex">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/14862/badge.svg"/>
+</a>
+
 ## Why Another Port?
 
 `doas` only targets *OpenBSD*, and lacked features that I felt were missing from it and `sudo` as well.  
