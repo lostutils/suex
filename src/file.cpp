@@ -69,6 +69,7 @@ void file::File::Clone(file::File &other, mode_t mode) const {
                                 std::strerror(errno));
   }
 }
+
 off_t file::File::Seek(off_t offset, int whence) const {
   off_t pos = lseek(fd_, offset, whence);
   if (pos < 0) {
@@ -88,6 +89,11 @@ ssize_t file::File::Write(gsl::span<const char> buff) const {
   if (bytes == -1) {
     throw suex::IOError("couldn't write to fd '%d: %s'", fd_, strerror(errno));
   }
+
+  if (fsync(fd_) == -1) {
+    throw suex::IOError("couldn't flush fd '%d': %s", fd_, strerror(errno));
+  }
+
   return bytes;
 }
 
