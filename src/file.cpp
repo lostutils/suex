@@ -32,7 +32,7 @@ off_t file::File::Tell() const { return Seek(0, SEEK_CUR); }
 void file::File::Close() {
   DEFER(Invalidate());
   if (close(fd_) < 0) {
-    throw suex::IOError("error closing '%d': %s", fd_, std::strerror(errno));
+    throw suex::IOError("error closing %d: %s", fd_, std::strerror(errno));
   }
   logger::debug() << "closed fd: " << fd_ << std::endl;
 }
@@ -50,22 +50,22 @@ void file::File::Clone(file::File &other, mode_t mode) const {
   Seek(0, SEEK_SET);
 
   if (ftruncate(other.fd_, 0) < 0) {
-    throw suex::IOError("can't clone '%d to '%d'. truncate(%d) failed: %s", fd_,
+    throw suex::IOError("can't clone %d to %d. truncate(%d) failed: %s", fd_,
                         other.fd_, other.fd_, std::strerror(errno));
   }
 
   if (sendfile(other.fd_, fd_, nullptr, static_cast<size_t>(st.st_size)) < 0) {
-    throw suex::IOError("can't clone '%d to '%d'. sendfile() failed: %s", fd_,
+    throw suex::IOError("can't clone %d to %d. sendfile() failed: %s", fd_,
                         other.fd_, std::strerror(errno));
   }
 
   if (fchown(other.fd_, st.st_uid, st.st_gid) < 0) {
-    throw suex::PermissionError("error on chown '%d': %s", other.fd_,
+    throw suex::PermissionError("error on chown %d: %s", other.fd_,
                                 std::strerror(errno));
   }
 
   if (fchmod(other.fd_, mode) < 0) {
-    throw suex::PermissionError("error on chmod '%d': %s", other.fd_,
+    throw suex::PermissionError("error on chmod %d: %s", other.fd_,
                                 std::strerror(errno));
   }
 }
@@ -73,25 +73,25 @@ void file::File::Clone(file::File &other, mode_t mode) const {
 off_t file::File::Seek(off_t offset, int whence) const {
   off_t pos = lseek(fd_, offset, whence);
   if (pos < 0) {
-    throw suex::IOError("error seeking '%d': %s", fd_, std::strerror(errno));
+    throw suex::IOError("error seeking %d: %s", fd_, std::strerror(errno));
   }
   return pos;
 }
 ssize_t file::File::Read(gsl::span<char> buff) const {
   ssize_t bytes = read(fd_, buff.data(), static_cast<size_t>(buff.size()));
   if (bytes == -1) {
-    throw suex::IOError("couldn't read from fd '%d: '", fd_, strerror(errno));
+    throw suex::IOError("couldn't read from fd %d: %s", fd_, strerror(errno));
   }
   return bytes;
 }
 ssize_t file::File::Write(gsl::span<const char> buff) const {
   ssize_t bytes = write(fd_, buff.data(), static_cast<size_t>(buff.size()));
   if (bytes == -1) {
-    throw suex::IOError("couldn't write to fd '%d: %s'", fd_, strerror(errno));
+    throw suex::IOError("couldn't write to fd %d: %s", fd_, strerror(errno));
   }
 
   if (fsync(fd_) == -1) {
-    throw suex::IOError("couldn't flush fd '%d': %s", fd_, strerror(errno));
+    throw suex::IOError("couldn't flush fd %d: %s", fd_, strerror(errno));
   }
 
   return bytes;
@@ -127,7 +127,7 @@ void file::File::ReadLine(
 
   FILE *f = fdopen(fd_, "r");
   if (f == nullptr) {
-    throw suex::IOError("error opening '%d' for reading: %s", fd_,
+    throw suex::IOError("error opening %d for reading: %s", fd_,
                         std::strerror(errno));
   }
   size_t len{0};
