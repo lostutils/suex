@@ -12,7 +12,6 @@ if(CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif()
 
-
 # void ptr = 8 byte --> x86_64 || void ptr != 8 byte --> x86
 if (CMAKE_SIZEOF_VOID_P MATCHES 8)
     set(CPU_ARCH "amd64")
@@ -41,8 +40,8 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g")
 
 # --- build ---
 
-file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/gsl/gsl/*")
-include_directories(include deps/gsl/include deps)
+file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/gsl/*")
+include_directories(include deps)
 add_executable(suex ${SOURCE_FILES})
 
 # suex depends on libpam and libdw

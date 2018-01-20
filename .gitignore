@@ -38,7 +38,6 @@
 # binary dir
 bin/
 build/
-deps/
 
 # man
 man/suex.1
