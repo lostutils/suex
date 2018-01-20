@@ -68,11 +68,7 @@ class File {
 
   template <typename... Args>
   int Control(int cmd, Args &&... args) const {
-    int ret = fcntl(fd_, cmd, args...);
-    if (ret < 0) {
-      throw suex::IOError("fcntl(%d) failed", fd_, strerror(errno));
-    }
-    return ret;
+    return fcntl(fd_, cmd, args...);
   }
 
  private:
@@ -83,4 +79,4 @@ class File {
   const stat_t Status() const;
   void Close();
 };
-}
+}  // namespace suex::file

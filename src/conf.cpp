@@ -5,10 +5,10 @@
 #include <sstream>
 
 using suex::permissions::Entity;
+using suex::permissions::Group;
+using suex::permissions::Group;
 using suex::permissions::Permissions;
 using suex::permissions::User;
-using suex::permissions::Group;
-using suex::permissions::Group;
 
 permissions::Permissions::Permissions(Permissions &other) noexcept
     : auth_style_{std::move(other.auth_style_)},
@@ -274,7 +274,10 @@ Permissions &Permissions::Load() {
 
   DEFER(if (f_.Path() == PATH_CONFIG) {
     write_lock.l_type = F_UNLCK;
-    f_.Control(F_OFD_SETLKW, &write_lock);
+    if (f_.Control(F_OFD_SETLKW, &write_lock) < 0) {
+      throw suex::IOError("Error when unlocking configuration: %s",
+                          strerror(errno));
+    }
   });
 
   logger::debug() << "parsing '" << f_.String() << std::endl;

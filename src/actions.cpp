@@ -5,9 +5,9 @@
 #include <wait.h>
 #include <sstream>
 
+using suex::optargs::OptArgs;
 using suex::permissions::Permissions;
 using suex::permissions::User;
-using suex::optargs::OptArgs;
 
 #define PATH_EDIT_LOCK PATH_VAR_RUN "/suex/edit.lock"
 
@@ -109,7 +109,10 @@ void suex::EditConfiguration(const OptArgs &opts,
 
   DEFER({
     edit_lock.l_type = F_UNLCK;
-    edit_f.Control(F_OFD_SETLKW, &edit_lock);
+    if (edit_f.Control(F_OFD_SETLKW, &edit_lock) < 0) {
+      throw suex::IOError("Error when unlocking configuration: %s",
+                          strerror(errno));
+    }
   });
 
   file::File conf_f(PATH_CONFIG, O_RDWR);
@@ -165,7 +168,10 @@ void suex::EditConfiguration(const OptArgs &opts,
 
   DEFER({
     write_lock.l_type = F_UNLCK;
-    conf_f.Control(F_OFD_SETLKW, &write_lock);
+    if (conf_f.Control(F_OFD_SETLKW, &write_lock) < 0) {
+      throw suex::IOError("Error when unlocking configuration: %s",
+                          strerror(errno));
+    }
   });
 
   tmp_f.Clone(conf_f, S_IRUSR | S_IRGRP);
