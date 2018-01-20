@@ -52,8 +52,8 @@ add_custom_command(TARGET suex POST_BUILD
         DEPENDS suex
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/man
         COMMENT "Generating man pages..."
-        COMMAND /usr/local/bin/ronn -r suex.md
-        COMMAND /usr/local/bin/ronn -r suex.conf.md
+        COMMAND ronn -r suex.md
+        COMMAND ronn -r suex.conf.md
         COMMAND mv -f suex.5 suex.conf.5)
 
 set_property(
