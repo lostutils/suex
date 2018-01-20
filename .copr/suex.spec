@@ -9,8 +9,13 @@ Source0:    %{url}archive/v%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
+BuildRequires:  ninja-build
+BuildRequires:  clang
+BuildRequires:  clang-libs
+BuildRequires:  clang-devel
+BuildRequires:  clang-tools-extra
 BuildRequires:  pam-devel
-BuildRequires:  pkgconfig(libdw)
+BuildRequires:  re2-devel
 BuildRequires:  rubygem-ronn
 
 %description
@@ -23,15 +28,17 @@ suex is a utility that is aimed to replace sudo for most ordinary use cases.
 
 %build
 mkdir build && pushd build
-export LANG=C.UTF-8
-%cmake -DCMAKE_BUILD_TYPE=Debug  -DCMAKE_POSITION_INDEPENDENT_CODE=ON ..
-%make_build
+export LANG=en_US.utf8
+export CC=$(which clang)
+export CXX=$(which clang++)
+%cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+%ninja_build
 popd
 
 
 %install
 pushd build
-%make_install
+%ninja_install
 popd
 
 
