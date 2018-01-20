@@ -17,6 +17,12 @@ The gist is that `sudo` is hard to configure and does a lot more then the standa
        src="https://scan.coverity.com/projects/14862/badge.svg"/>
 </a>
 
+<a href="https://copr.fedorainfracloud.org/coprs/odedlaz/suex">
+  <img alt="fedora copr build Status"
+       src="https://copr.fedorainfracloud.org/coprs/odedlaz/suex/package/suex/status_image/last_build.png"/>
+</a>
+
+
 ## Why Another Port?
 
 `doas` only targets *OpenBSD*, and lacked features that I felt were missing from it and `sudo` as well.  
