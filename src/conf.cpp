@@ -1,7 +1,7 @@
-#include <conf.h>
 #include <glob.h>
-#include <logger.h>
-#include <rx.h>
+#include <conf.hpp>
+#include <logger.hpp>
+#include <rx.hpp>
 #include <sstream>
 
 using suex::permissions::Entity;

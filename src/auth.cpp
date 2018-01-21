@@ -1,7 +1,7 @@
-#include <auth.h>
-#include <conf.h>
 #include <glob.h>
-#include <logger.h>
+#include <auth.hpp>
+#include <conf.hpp>
+#include <logger.hpp>
 
 #include <security/pam_misc.h>
 #include <sstream>

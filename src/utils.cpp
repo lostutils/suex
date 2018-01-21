@@ -1,7 +1,7 @@
-#include <exceptions.h>
-#include <logger.h>
+#include <exceptions.hpp>
 #include <gsl/gsl>
 #include <iomanip>
+#include <logger.hpp>
 
 using suex::permissions::User;
 

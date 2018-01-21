@@ -1,8 +1,8 @@
-#include <exceptions.h>
-#include <logger.h>
+#include <exceptions.hpp>
+#include <logger.hpp>
 
-using suex::logger::Type;
 using suex::logger::Logger;
+using suex::logger::Type;
 
 const std::string TypeName(Type type) {
   switch (type) {

@@ -41,12 +41,8 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g")
 # --- build ---
 
 file(GLOB_RECURSE SOURCE_FILES
-     "include/*.h"
-     "include/*.hpp"
-     "src/*.cpp"
-     "deps/**/*.h"
-     "deps/**/*.hpp"
-     "deps/**/*.cpp")
+     "include/*.hpp" "src/*.cpp"
+     "deps/**/*.h" "deps/**/*.hpp" "deps/**/*.cpp")
 
 include_directories(include deps)
 add_executable(suex ${SOURCE_FILES})

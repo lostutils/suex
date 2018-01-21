@@ -1,9 +1,9 @@
 #pragma once
 #include <getopt.h>
-#include <perm.h>
-#include <utils.h>
 #include <gsl/span>
 #include <iostream>
+#include <perm.hpp>
+#include <utils.hpp>
 #include <vector>
 
 namespace suex::optargs {

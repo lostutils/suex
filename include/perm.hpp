@@ -172,4 +172,4 @@ class Entity {
 };
 void Set(const User &user);
 std::ostream &operator<<(std::ostream &os, const Entity &entity);
-}
+}  // namespace suex::permissions

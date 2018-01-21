@@ -1,9 +1,9 @@
 
 #pragma once
 
-#include <conf.h>
-#include <env.h>
-#include <optarg.h>
+#include <conf.hpp>
+#include <env.hpp>
+#include <optarg.hpp>
 
 namespace suex {
 
@@ -26,4 +26,4 @@ const permissions::Entity *Permit(const permissions::Permissions &permissions,
 void SwitchUserAndExecute(const permissions::User &user,
                           const std::vector<char *> &cmdargv,
                           char *const envp[]);
-}
+}  // namespace suex

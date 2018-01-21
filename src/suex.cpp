@@ -1,8 +1,8 @@
-#include <actions.h>
-#include <auth.h>
-#include <logger.h>
-#include <version.h>
+#include <actions.hpp>
+#include <auth.hpp>
 #include <backward-cpp/backward.hpp>
+#include <logger.hpp>
+#include <version.hpp>
 
 using suex::optargs::OptArgs;
 using suex::permissions::Permissions;

@@ -2,12 +2,12 @@
 
 #include <functional>
 
-#include <env.h>
-#include <perm.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <env.hpp>
 #include <gsl/span>
 #include <iostream>
+#include <perm.hpp>
 #include <vector>
 
 const suex::permissions::User &RunningUser();
@@ -30,4 +30,4 @@ bool BypassPermissions(const suex::permissions::User &as_user);
 bool AskQuestion(const std::string &prompt);
 
 std::string GetEditor();
-}
+}  // namespace suex::utils

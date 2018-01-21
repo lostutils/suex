@@ -13,4 +13,4 @@ const std::string Readlink(int fd);
 const std::string GetPath(int fd);
 
 const std::string Locate(const std::string &path, bool searchInPath = true);
-}
+}  // namespace suex::utils::path

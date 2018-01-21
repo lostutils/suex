@@ -1,7 +1,7 @@
-#include <env.h>
-#include <fmt.h>
-#include <utils.h>
+#include <env.hpp>
+#include <fmt.hpp>
 #include <sstream>
+#include <utils.hpp>
 
 char **suex::env::Raw() { return environ; };
 

@@ -1,9 +1,9 @@
-#include <actions.h>
-#include <auth.h>
-#include <logger.h>
-#include <version.h>
 #include <wait.h>
+#include <actions.hpp>
+#include <auth.hpp>
+#include <logger.hpp>
 #include <sstream>
+#include <version.hpp>
 
 using suex::optargs::OptArgs;
 using suex::permissions::Permissions;

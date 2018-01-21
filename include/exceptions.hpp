@@ -1,7 +1,7 @@
 #pragma once
-#include <utils.h>
+#include <fmt.hpp>
 #include <stdexcept>
-#include "fmt.h"
+#include <utils.hpp>
 
 namespace suex {
 
@@ -50,4 +50,4 @@ class ConfigError : public SuExError {
   explicit ConfigError(const std::string &format, Args &&... args)
       : SuExError(format, std::forward<Args>(args)...) {}
 };
-}
+}  // namespace suex

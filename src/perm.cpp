@@ -1,10 +1,10 @@
-#include <exceptions.h>
-#include <logger.h>
+#include <exceptions.hpp>
+#include <logger.hpp>
 #include <sstream>
 
 using suex::permissions::Entity;
-using suex::permissions::User;
 using suex::permissions::Group;
+using suex::permissions::User;
 
 std::ostream &permissions::operator<<(std::ostream &os, const Entity &entity) {
   os << (entity.Deny() ? "deny" : "permit") << " " << entity.Owner().Name()

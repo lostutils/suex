@@ -1,11 +1,11 @@
 #pragma once
 
-#include <file.h>
-#include <optarg.h>
-#include <perm.h>
 #include <re2/re2.h>
-#include <utils.h>
+#include <file.hpp>
+#include <optarg.hpp>
+#include <perm.hpp>
 #include <string>
+#include <utils.hpp>
 
 namespace suex::permissions {
 

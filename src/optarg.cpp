@@ -1,7 +1,7 @@
-#include <auth.h>
-#include <conf.h>
-#include <logger.h>
-#include <version.h>
+#include <auth.hpp>
+#include <conf.hpp>
+#include <logger.hpp>
+#include <version.hpp>
 
 using suex::optargs::OptArgs;
 

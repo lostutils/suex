@@ -10,4 +10,4 @@ char *GetRaw(const std::string &env);
 bool Contains(const std::string &env);
 std::pair<std::string, std::string> SplitRaw(const std::string &raw_env);
 char *ToRaw(const std::string &key, const std::string &val);
-}
+}  // namespace suex::env

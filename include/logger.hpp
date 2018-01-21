@@ -1,10 +1,10 @@
 #pragma once
 
-#include <path.h>
-#include <perm.h>
 #include <fstream>
 #include <iostream>
 #include <ostream>
+#include <path.hpp>
+#include <perm.hpp>
 
 using namespace suex;
 
@@ -47,4 +47,4 @@ Logger &info();
 Logger &warning();
 
 Logger &error();
-};
+};  // namespace suex::logger

@@ -1,4 +1,4 @@
-#include <rx.h>
+#include <rx.hpp>
 
 bool ::suex::utils::rx::NamedFullMatch(const re2::RE2 &rx,
                                        const std::string &line,
