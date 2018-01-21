@@ -16,6 +16,7 @@ BuildRequires:  clang-devel
 BuildRequires:  clang-tools-extra
 BuildRequires:  pam-devel
 BuildRequires:  re2-devel
+BuildRequires:  elfutils-devel
 BuildRequires:  rubygem-ronn
 
 %description

@@ -40,12 +40,20 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g")
 
 # --- build ---
 
-file(GLOB_RECURSE SOURCE_FILES "include/*.h" "src/*.*pp" "deps/gsl/*")
+file(GLOB_RECURSE SOURCE_FILES
+     "include/*.h"
+     "include/*.hpp"
+     "src/*.cpp"
+     "deps/**/*.h"
+     "deps/**/*.hpp"
+     "deps/**/*.cpp")
+
 include_directories(include deps)
 add_executable(suex ${SOURCE_FILES})
 
 # suex depends on libpam and libdw
-target_link_libraries(suex re2 pam)
+target_link_libraries(suex re2 pam dw)
+target_compile_definitions(suex PRIVATE BACKWARD_HAS_DW=1)
 
 # generating man pages from markdown using ronn
 add_custom_command(TARGET suex POST_BUILD
