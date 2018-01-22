@@ -157,3 +157,31 @@ const file::stat_t file::File::Status() const {
   return st;
 }
 void file::File::Invalidate() { fd_ = -1; }
+
+file::Flock::Flock(file::File &file, int16_t l_type, bool blocking) : f_{file} {
+  if (l_type != F_RDLCK && l_type != F_WRLCK) {
+    throw suex::IOError("lock type not supported", strerror(errno));
+  }
+
+  flock_t lock = {0};
+  lock.l_type = l_type;
+  logger::debug() << "acquiring lock on " << f_.Path() << std::endl;
+  if (f_.Control(blocking ? F_OFD_SETLKW : F_OFD_SETLK, &lock) < 0) {
+    if (errno == EAGAIN || errno == EAGAIN) {
+      throw suex::IOError(
+          "error when locking file '%s': already locked by another process",
+          file.Path().c_str());
+    }
+    throw suex::IOError("error when locking file '%s': %s", file.Path().c_str(),
+                        strerror(errno));
+  }
+}
+
+file::Flock::~Flock() noexcept(false) {
+  flock_t lock = {0};
+  lock.l_type = F_UNLCK;
+  if (f_.Control(F_OFD_SETLKW, &lock) < 0) {
+    throw suex::IOError("error when unlocking file '%s': %s", f_.Path().c_str(),
+                        strerror(errno));
+  }
+}

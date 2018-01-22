@@ -93,27 +93,9 @@ void suex::EditConfiguration(const OptArgs &opts,
   }
 
   file::File edit_f{PATH_EDIT_LOCK, O_CREAT | O_RDWR};
-
+  file::Flock edit_lock{edit_f, F_WRLCK, false};
+  // defer removing the lock file after lock is successful
   DEFER({ edit_f.Remove(); });
-
-  struct flock edit_lock = {0};
-  edit_lock.l_type = F_WRLCK;
-  if (edit_f.Control(F_OFD_SETLK, &edit_lock) < 0) {
-    if (errno == EAGAIN || errno == EACCES) {
-      throw suex::ConfigError(
-          "Configuration is being edited in another session");
-    }
-    throw suex::IOError("error when locking configuration: %s",
-                        strerror(errno));
-  }
-
-  DEFER({
-    edit_lock.l_type = F_UNLCK;
-    if (edit_f.Control(F_OFD_SETLKW, &edit_lock) < 0) {
-      throw suex::IOError("error when unlocking configuration: %s",
-                          strerror(errno));
-    }
-  });
 
   file::File conf_f(PATH_CONFIG, O_RDWR);
   file::File tmp_f(PATH_TMP, O_TMPFILE | O_RDWR | O_EXCL, S_IRUSR | S_IRGRP);
@@ -159,21 +141,7 @@ void suex::EditConfiguration(const OptArgs &opts,
     }
   }
 
-  struct flock write_lock = {0};
-  write_lock.l_type = F_WRLCK;
-  if (conf_f.Control(F_OFD_SETLKW, &write_lock) < 0) {
-    throw suex::IOError("error when locking configuration: %s",
-                        strerror(errno));
-  }
-
-  DEFER({
-    write_lock.l_type = F_UNLCK;
-    if (conf_f.Control(F_OFD_SETLKW, &write_lock) < 0) {
-      throw suex::IOError("error when unlocking configuration: %s",
-                          strerror(errno));
-    }
-  });
-
+  file::Flock conf_lock{conf_f, F_WRLCK};
   tmp_f.Clone(conf_f, S_IRUSR | S_IRGRP);
   std::cout << PATH_CONFIG << " changes applied." << std::endl;
 }

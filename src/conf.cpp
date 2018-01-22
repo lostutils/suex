@@ -263,23 +263,7 @@ Permissions &Permissions::Load() {
     throw ConfigError("not allowed to reload configuration");
   }
 
-  struct flock write_lock = {0};
-  if (f_.Path() == PATH_CONFIG) {
-    write_lock.l_type = F_RDLCK;
-    logger::debug() << "acquiring lock on " << f_.Path() << std::endl;
-    if (f_.Control(F_OFD_SETLKW, &write_lock) < 0) {
-      throw suex::IOError("error when locking configuration: %s",
-                          strerror(errno));
-    }
-  }
-
-  DEFER(if (f_.Path() == PATH_CONFIG) {
-    write_lock.l_type = F_UNLCK;
-    if (f_.Control(F_OFD_SETLKW, &write_lock) < 0) {
-      throw suex::IOError("error when unlocking configuration: %s",
-                          strerror(errno));
-    }
-  });
+  file::Flock flock{f_, F_RDLCK};
 
   logger::debug() << "parsing '" << f_.String() << std::endl;
   if (f_.Path() == PATH_CONFIG && !f_.IsSecure()) {

@@ -14,6 +14,7 @@ struct line_t {
 };
 
 typedef struct stat stat_t;
+typedef struct flock flock_t;
 
 class File {
  public:
@@ -79,4 +80,17 @@ class File {
   const stat_t Status() const;
   void Close();
 };
+
+class Flock {
+ public:
+  explicit Flock(File &file, int16_t l_type, bool blocking = true);
+  ~Flock() noexcept(false);
+  Flock(const Flock &) = delete;
+  Flock(Flock &&other) = delete;
+  void operator=(const Flock &) = delete;
+
+ private:
+  File f_;
+};
+
 }  // namespace suex::file
