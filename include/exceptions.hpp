@@ -35,14 +35,6 @@ class AuthError : public PermissionError {
       : PermissionError(format, std::forward<Args>(args)...) {}
 };
 
-class IOError : public SuExError {
- public:
-  explicit IOError(const std::string &text) : SuExError(text) {}
-  template <typename... Args>
-  explicit IOError(const std::string &format, Args &&... args)
-      : SuExError(format, std::forward<Args>(args)...) {}
-};
-
 class ConfigError : public SuExError {
  public:
   explicit ConfigError(const std::string &text) : SuExError(text) {}
@@ -50,4 +42,22 @@ class ConfigError : public SuExError {
   explicit ConfigError(const std::string &format, Args &&... args)
       : SuExError(format, std::forward<Args>(args)...) {}
 };
+
+/* this class of error aren't handled by default and create a stacktrace */
+class FatalError : public std::runtime_error {
+ public:
+  explicit FatalError(const std::string &text) : std::runtime_error(text) {}
+  template <typename... Args>
+  explicit FatalError(const std::string &format, Args &&... args)
+      : runtime_error(Sprintf(format, std::forward<Args>(args)...)) {}
+};
+
+class IOError : public FatalError {
+ public:
+  explicit IOError(const std::string &text) : FatalError(text) {}
+  template <typename... Args>
+  explicit IOError(const std::string &format, Args &&... args)
+      : FatalError(format, std::forward<Args>(args)...) {}
+};
+
 }  // namespace suex

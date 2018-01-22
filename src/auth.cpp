@@ -41,15 +41,17 @@ time_t GetToken(const std::string &filename) {
   file::File f{filename, O_CREAT | O_RDONLY};
 
   if (!S_ISREG(f.Mode())) {
-    throw suex::IOError("auth timestamp is not a file");
+    throw suex::IOError("auth timestamp '%s' is not a regular file",
+                        filename.c_str());
   }
 
   if (!f.IsSecure()) {
-    throw suex::PermissionError("auth timestamp file has invalid permissions");
+    throw suex::IOError("auth timestamp '%s' has invalid permissions",
+                        filename.c_str());
   }
 
   if (f.Size() > MAX_FILE_SIZE) {
-    throw suex::PermissionError("auth timestamp file is too big");
+    throw suex::IOError("auth timestamp '%s' is too big", filename.c_str());
   }
 
   char buff[f.Size()];

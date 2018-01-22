@@ -16,25 +16,35 @@ void ShowUsage() {
 void CreateRuntimeDirectories() {
   file::stat_t fstat{0};
   if (stat(PATH_VAR_RUN, &fstat) != 0) {
-    throw suex::IOError(std::strerror(errno));
+    throw suex::IOError("stat('%s') failed: %s", PATH_VAR_RUN,
+                        std::strerror(errno));
   }
 
   if (stat(PATH_SUEX_TMP, &fstat) != 0) {
     if (mkdir(PATH_SUEX_TMP, S_IRUSR | S_IRGRP) < 0) {
-      throw suex::IOError(std::strerror(errno));
+      throw suex::IOError("mkdir('%s') failed: %s", PATH_SUEX_TMP,
+                          std::strerror(errno));
     }
 
     if (chown(PATH_SUEX_TMP, 0, 0) < 0) {
-      throw suex::PermissionError(std::strerror(errno));
+      throw suex::IOError("chown('%s') failed: %s", PATH_SUEX_TMP,
+                          std::strerror(errno));
     }
+    return CreateRuntimeDirectories();
+  }
 
-    if (stat(PATH_SUEX_TMP, &fstat) != 0) {
-      throw suex::IOError(std::strerror(errno));
+  if (fstat.st_gid != 0 || fstat.st_uid != 0) {
+    if (remove(PATH_VAR_RUN) == 0) {
+      return CreateRuntimeDirectories();
     }
+    throw suex::IOError("'%s' not owned my root:root", PATH_SUEX_TMP);
   }
 
   if (!S_ISDIR(fstat.st_mode)) {
-    throw suex::IOError("auth timestamp directory is not a directory");
+    if (remove(PATH_VAR_RUN) == 0) {
+      return CreateRuntimeDirectories();
+    }
+    throw suex::IOError("'%s' is not a directory", PATH_SUEX_TMP);
   }
 }
 
@@ -135,11 +145,11 @@ int Do(const Permissions &permissions, const OptArgs &opts) {
 
 int main(int argc, char *argv[]) {
   backward::SignalHandling sh;
+
   try {
     if (static_cast<int>(geteuid()) != RootUser().Id() ||
         static_cast<int>(getegid()) != RootUser().GroupId()) {
-      throw suex::PermissionError("suex setid & setgid are no set", geteuid(),
-                                  getegid());
+      throw suex::IOError("suex setid & setgid are no set");
     }
     OptArgs opts{argc, argv};
     if (opts.VerboseMode()) {
@@ -152,6 +162,12 @@ int main(int argc, char *argv[]) {
     return 1;
   } catch (SuExError &e) {
     std::cerr << e.what() << std::endl;
+    return 1;
+  } catch (std::exception &) {
+    if (Permissions::Privileged()) {
+      throw;
+    }
+    std::cerr << "an unhandled error occurred" << std::endl;
     return 1;
   }
 }

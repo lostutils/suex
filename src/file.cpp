@@ -19,7 +19,7 @@ bool file::File::Remove(bool silent) {
     return false;
   }
 
-  throw suex::IOError("%s: %s", path_.c_str(), std::strerror(errno));
+  throw suex::IOError("unlink(%s): %s", path_.c_str(), std::strerror(errno));
 }
 
 bool file::File::IsSecure() const {
@@ -127,7 +127,7 @@ void file::File::ReadLine(
 
   FILE *f = fdopen(fd_, "r");
   if (f == nullptr) {
-    throw suex::IOError("error opening %d for reading: %s", fd_,
+    throw suex::IOError("error opening fd %d for reading: %s", fd_,
                         std::strerror(errno));
   }
   size_t len{0};

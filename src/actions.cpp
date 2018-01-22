@@ -99,18 +99,18 @@ void suex::EditConfiguration(const OptArgs &opts,
   struct flock edit_lock = {0};
   edit_lock.l_type = F_WRLCK;
   if (edit_f.Control(F_OFD_SETLK, &edit_lock) < 0) {
-    std::string txt{
-        Sprintf("Error when locking configuration: %s", strerror(errno))};
     if (errno == EAGAIN || errno == EACCES) {
-      txt = "Configuration is being edited in another session";
+      throw suex::ConfigError(
+          "Configuration is being edited in another session");
     }
-    throw suex::IOError(txt);
+    throw suex::IOError("error when locking configuration: %s",
+                        strerror(errno));
   }
 
   DEFER({
     edit_lock.l_type = F_UNLCK;
     if (edit_f.Control(F_OFD_SETLKW, &edit_lock) < 0) {
-      throw suex::IOError("Error when unlocking configuration: %s",
+      throw suex::IOError("error when unlocking configuration: %s",
                           strerror(errno));
     }
   });
@@ -162,14 +162,14 @@ void suex::EditConfiguration(const OptArgs &opts,
   struct flock write_lock = {0};
   write_lock.l_type = F_WRLCK;
   if (conf_f.Control(F_OFD_SETLKW, &write_lock) < 0) {
-    throw suex::IOError("Error when locking configuration: %s",
+    throw suex::IOError("error when locking configuration: %s",
                         strerror(errno));
   }
 
   DEFER({
     write_lock.l_type = F_UNLCK;
     if (conf_f.Control(F_OFD_SETLKW, &write_lock) < 0) {
-      throw suex::IOError("Error when unlocking configuration: %s",
+      throw suex::IOError("error when unlocking configuration: %s",
                           strerror(errno));
     }
   });

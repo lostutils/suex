@@ -81,7 +81,8 @@ const std::vector<User> &GetUsers(const std::string &user,
 bool IsExecutable(const std::string &path) {
   file::stat_t st{0};
   if (stat(path.c_str(), &st) < 0) {
-    throw suex::IOError("couldn't get executable stat");
+    throw suex::IOError("couldn't get executable '%s' stat: %s", path.c_str(),
+                        std::strerror(errno));
   }
   // ignore non executables
   return (st.st_mode & S_IEXEC) == S_IEXEC && S_ISREG(st.st_mode);
@@ -267,7 +268,7 @@ Permissions &Permissions::Load() {
     write_lock.l_type = F_RDLCK;
     logger::debug() << "acquiring lock on " << f_.Path() << std::endl;
     if (f_.Control(F_OFD_SETLKW, &write_lock) < 0) {
-      throw suex::IOError("Error when locking configuration: %s",
+      throw suex::IOError("error when locking configuration: %s",
                           strerror(errno));
     }
   }
@@ -275,7 +276,7 @@ Permissions &Permissions::Load() {
   DEFER(if (f_.Path() == PATH_CONFIG) {
     write_lock.l_type = F_UNLCK;
     if (f_.Control(F_OFD_SETLKW, &write_lock) < 0) {
-      throw suex::IOError("Error when unlocking configuration: %s",
+      throw suex::IOError("error when unlocking configuration: %s",
                           strerror(errno));
     }
   });
