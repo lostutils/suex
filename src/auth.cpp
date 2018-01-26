@@ -106,7 +106,7 @@ int auth::ClearTokens(const std::string &style) {
 
 bool auth::StyleExists(const std::string &style) {
   std::string policy_path{Sprintf("%s/%s", PATH_PAM_POlICY, style.c_str())};
-  return utils::path::Exists(policy_path);
+  return path::Exists(policy_path);
 }
 
 bool auth::Authenticate(const std::string &style, bool prompt,

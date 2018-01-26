@@ -13,7 +13,7 @@ OptArgs::OptArgs(int argc, char *argv[]) {
   args_ = std::vector<char *>{argv + optind, argv + argc};
   // low level c code needs an indication when an array of pointers ends
   args_.emplace_back(static_cast<char *>(nullptr));
-  binary_ = suex::utils::path::Locate(args_.front());
+  binary_ = path::Locate(args_.front());
   args_.front() = utils::ConstCorrect(binary_.c_str());
 }
 
@@ -102,7 +102,7 @@ int OptArgs::ParseOpts(int argc, char *argv[]) {
         break;
       }
       case 'C': {
-        config_path_ = suex::utils::path::Locate(optarg);
+        config_path_ = path::Locate(optarg);
         break;
       }
       default: {

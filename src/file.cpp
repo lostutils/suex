@@ -102,9 +102,7 @@ const std::string &file::File::Path() const { return path_; }
 const std::string &file::File::DescriptorPath() const { return internal_path_; }
 
 file::File::File(int fd)
-    : fd_{fd},
-      path_{utils::path::Readlink(fd)},
-      internal_path_{utils::path::GetPath(fd)} {}
+    : fd_{fd}, path_{path::Readlink(fd)}, internal_path_{path::GetPath(fd)} {}
 
 file::File::File(file::File &other) noexcept {
   fd_ = other.fd_;

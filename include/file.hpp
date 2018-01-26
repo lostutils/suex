@@ -27,8 +27,8 @@ class File {
       throw suex::IOError("error opening '%s': %s", path.c_str(),
                           std::strerror(errno));
     }
-    path_ = utils::path::Readlink(fd_);
-    internal_path_ = utils::path::GetPath(fd_);
+    path_ = path::Readlink(fd_);
+    internal_path_ = path::GetPath(fd_);
   }
 
   File(const File &) = delete;

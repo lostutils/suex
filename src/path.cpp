@@ -5,8 +5,7 @@
 #include <logger.hpp>
 #include <sstream>
 
-const std::string utils::path::Locate(const std::string &path,
-                                      bool searchInPath) {
+const std::string path::Locate(const std::string &path, bool searchInPath) {
   if (path.empty()) {
     throw suex::IOError("path '%s' is empty", path.c_str());
   }
@@ -31,11 +30,11 @@ const std::string utils::path::Locate(const std::string &path,
   throw suex::IOError("path '%s' doesn't exist", path.c_str());
 }
 
-bool utils::path::Exists(const std::string &path) {
+bool path::Exists(const std::string &path) {
   file::stat_t status{0};
   return stat(path.c_str(), &status) == 0;
 }
-const std::string utils::path::Readlink(int fd) {
+const std::string path::Readlink(int fd) {
   std::string path{GetPath(fd)};
   char buff[PATH_MAX];
   auto buff_view{gsl::make_span(buff)};
@@ -48,6 +47,6 @@ const std::string utils::path::Readlink(int fd) {
   buff_view.at(read) = '\0';
   return buff_view.data();
 }
-const std::string utils::path::GetPath(int fd) {
+const std::string path::GetPath(int fd) {
   return Sprintf("/proc/%d/fd/%d", getpid(), fd);
 }

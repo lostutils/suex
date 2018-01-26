@@ -102,7 +102,7 @@ const std::vector<std::string> &GetExecutables(const std::string &glob_pattern,
 
   for (std::string path : paths) {
     if (IsExecutable(path)) {
-      vec->emplace_back(suex::utils::path::Locate(path, false));
+      vec->emplace_back(path::Locate(path, false));
     }
   }
 
